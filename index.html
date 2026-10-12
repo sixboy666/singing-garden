@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singing Garden</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <div class="start-content">
+                <div class="title-decoration">
+                    <span class="floating-note note-1">&#9834;</span>
+                    <span class="floating-note note-2">&#9835;</span>
+                    <span class="floating-note note-3">&#9833;</span>
+                    <span class="floating-note note-4">&#9836;</span>
+                </div>
+                <h1 class="game-title">Singing Garden</h1>
+                <p class="game-subtitle">Grow strange plants. Make them sing. Create your own garden music!</p>
+                <button id="start-btn" class="big-btn">Start Garden</button>
+                <p class="hint-text">Best experienced with sound on &#128266;</p>
+            </div>
+        </div>
+
+        <!-- Garden Screen -->
+        <div id="garden-screen" class="screen hidden">
+            <!-- Header -->
+            <div id="header">
+                <h2>My Singing Garden</h2>
+                <div id="header-controls">
+                    <button id="mute-btn" class="icon-btn" title="Mute / Unmute">&#128266;</button>
+                    <button id="help-btn" class="icon-btn" title="How to Play">?</button>
+                </div>
+            </div>
+
+            <!-- Garden Area -->
+            <div id="garden-area">
+                <div id="sky-layer">
+                    <div class="sun"></div>
+                    <div class="cloud cloud-1"></div>
+                    <div class="cloud cloud-2"></div>
+                    <div class="cloud cloud-3"></div>
+                </div>
+                <div id="plots-container"></div>
+                <div id="grass-layer"></div>
+            </div>
+
+            <!-- Controls Bar -->
+            <div id="controls-bar">
+                <div id="plant-selector">
+                    <span class="selector-label">Choose a plant:</span>
+                    <div id="plant-buttons"></div>
+                </div>
+                <div id="action-buttons">
+                    <button id="water-btn" class="action-btn water-btn" title="Toggle water mode">
+                        <span class="btn-icon">&#128167;</span>
+                        <span class="btn-label">Water</span>
+                    </button>
+                    <button id="play-btn" class="action-btn play-btn" title="Play melody">
+                        <span class="btn-icon">&#9654;</span>
+                        <span class="btn-label">Play Melody</span>
+                    </button>
+                    <button id="clear-btn" class="action-btn clear-btn" title="Clear all plants">
+                        <span class="btn-icon">&#128465;</span>
+                        <span class="btn-label">Clear All</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>How to Play</h2>
+                <div class="help-section">
+                    <span class="help-icon">&#127793;</span>
+                    <h3>Plant</h3>
+                    <p>Choose a plant from the bottom menu, then click an empty plot to plant it.</p>
+                </div>
+                <div class="help-section">
+                    <span class="help-icon">&#127925;</span>
+                    <h3>Sing</h3>
+                    <p>Click a planted flower to make it sing! Each plant has its own unique voice.</p>
+                </div>
+                <div class="help-section">
+                    <span class="help-icon">&#128167;</span>
+                    <h3>Water</h3>
+                    <p>Toggle Water mode, then click a plant to water it. Watering changes how it sounds!</p>
+                </div>
+                <div class="help-section">
+                    <span class="help-icon">&#127932;</span>
+                    <h3>Melody</h3>
+                    <p>Plant different flowers and press Play Melody to hear them sing together!</p>
+                </div>
+                <button id="close-help-btn" class="big-btn">Got it!</button>
+            </div>
+        </div>
+
+        <!-- Effects Canvas -->
+        <canvas id="effects-canvas"></canvas>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/plants.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
