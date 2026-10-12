@@ -1,6 +1,7 @@
 /* ============================================
    SINGING GARDEN - Game Controller
    Main game logic: planting, singing, watering, melody
+   8 plots, 12 plant types with unique animations
    ============================================ */
 
 class Game {
@@ -49,6 +50,7 @@ class Game {
         toast.textContent = msg;
         toast.style.opacity = '1';
         clearTimeout(this._toastTimer);
+        var self = this;
         this._toastTimer = setTimeout(function() {
             toast.style.opacity = '0';
         }, 2200);
@@ -94,11 +96,11 @@ class Game {
         });
     }
 
-    /* ---- Plot creation ---- */
+    /* ---- Plot creation (8 plots in 4x2 grid) ---- */
     createPlots() {
         var container = document.getElementById('plots-container');
         var self = this;
-        for (var i = 0; i < 6; i++) {
+        for (var i = 0; i < 8; i++) {
             var plot = document.createElement('div');
             plot.className = 'plot';
             plot.dataset.index = i;
@@ -106,10 +108,12 @@ class Game {
                 '<div class="soil"></div>' +
                 '<div class="water-level-indicator"></div>' +
                 '<div class="plant-container"></div>';
-            plot.addEventListener('click', function() {
-                var idx = parseInt(this.dataset.index);
-                self.handlePlotClick(idx);
-            });
+            (function(plotEl) {
+                plotEl.addEventListener('click', function() {
+                    var idx = parseInt(plotEl.dataset.index);
+                    self.handlePlotClick(idx);
+                });
+            })(plot);
             container.appendChild(plot);
             this.plots.push({
                 planted: false,
@@ -131,9 +135,11 @@ class Game {
             btn.innerHTML =
                 '<span class="plant-btn-emoji">' + plant.emoji + '</span>' +
                 '<span class="plant-btn-name">' + plant.name + '</span>';
-            btn.addEventListener('click', function() {
-                self.selectPlantType(plant.id);
-            });
+            (function(plantBtn, plantId) {
+                plantBtn.addEventListener('click', function() {
+                    self.selectPlantType(plantId);
+                });
+            })(btn, plant.id);
             container.appendChild(btn);
         });
     }
@@ -166,7 +172,6 @@ class Game {
             self.hideHelp();
         });
 
-        // Close help modal by clicking backdrop
         document.getElementById('help-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 self.hideHelp();
@@ -212,10 +217,13 @@ class Game {
                 case 'h': case 'H':
                     self.showHelp();
                     break;
-                case '1': case '2': case '3': case '4': case '5': case '6':
-                    var idx = parseInt(e.key) - 1;
-                    if (idx < PLANT_TYPES.length) {
-                        self.selectPlantType(PLANT_TYPES[idx].id);
+                default:
+                    /* Number keys 1-9 select plants 1-9 */
+                    if (e.key >= '1' && e.key <= '9') {
+                        var idx = parseInt(e.key) - 1;
+                        if (idx < PLANT_TYPES.length) {
+                            self.selectPlantType(PLANT_TYPES[idx].id);
+                        }
                     }
                     break;
             }
@@ -260,17 +268,13 @@ class Game {
 
         var container = plot.element.querySelector('.plant-container');
         container.innerHTML = this._wrapPlantSVG(plant.renderSVG(0));
-        container.className = 'plant-container plant-swaying plant-growing';
+        container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-growing';
         setTimeout(function() {
             container.classList.remove('plant-growing');
         }, 600);
 
-        // Play a welcome note
         this.audio.playNote(plant.audio, 0);
-
-        // Sparkle effect
         this.effects.spawnSparkles(plot.element);
-
         this.updateUI();
     }
 
@@ -281,7 +285,6 @@ class Game {
         var plant = getPlantById(plot.plantType);
         if (!plant) return;
 
-        // Play arpeggio
         var self = this;
         plant.audio.notes.forEach(function(note, i) {
             setTimeout(function() {
@@ -289,22 +292,20 @@ class Game {
             }, i * 150);
         });
 
-        // Singing animation (restart animation)
+        /* Restart singing animation with plant's unique animClass */
         var container = plot.element.querySelector('.plant-container');
         container.classList.remove('plant-singing');
         void container.offsetWidth;
         container.classList.add('plant-singing');
         setTimeout(function() {
             container.classList.remove('plant-singing');
-        }, 600);
+        }, 800);
 
-        // Highlight plot
         plot.element.classList.add('plot-singing');
         setTimeout(function() {
             plot.element.classList.remove('plot-singing');
         }, 600);
 
-        // Note particles
         plant.audio.notes.forEach(function(note, i) {
             setTimeout(function() {
                 self.effects.spawnNote(plot.element, plant.colors.primary);
@@ -321,21 +322,16 @@ class Game {
         var plant = getPlantById(plot.plantType);
         if (!plant) return;
 
-        // Re-render plant with new water level
         var container = plot.element.querySelector('.plant-container');
         container.innerHTML = this._wrapPlantSVG(plant.renderSVG(plot.waterLevel));
-        container.className = 'plant-container plant-swaying plant-singing';
+        container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-singing';
         setTimeout(function() {
             container.classList.remove('plant-singing');
-        }, 500);
+        }, 600);
 
-        // Water drop effect
         this.effects.spawnWaterDrops(plot.element);
-
-        // Play a note to show the change
         this.audio.playNote(plant.audio, plot.waterLevel);
 
-        // Toast
         var labels = ['Dry', 'Watered', 'Well-watered', 'Lush!'];
         this.showToast(plant.name + ': ' + labels[plot.waterLevel]);
 
@@ -384,18 +380,16 @@ class Game {
             }
             self.clickPlant(plantedIndices[step]);
             step++;
-            setTimeout(playNext, 700);
+            setTimeout(playNext, 750);
         }
         playNext();
     }
 
     /* ---- Clear all plants ---- */
     clearGarden() {
-        // Stop melody
         this.melodyStopped = true;
         this.isPlayingMelody = false;
 
-        // Clear all plots
         for (var i = 0; i < this.plots.length; i++) {
             var plot = this.plots[i];
             plot.planted = false;
@@ -438,7 +432,6 @@ class Game {
 
     /* ---- Update UI state ---- */
     updateUI() {
-        // Plant selection buttons
         var buttons = document.querySelectorAll('.plant-btn');
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].dataset.plantId === this.selectedPlantType) {
@@ -448,7 +441,6 @@ class Game {
             }
         }
 
-        // Water button
         var waterBtn = document.getElementById('water-btn');
         if (this.waterMode) {
             waterBtn.classList.add('active');
@@ -456,7 +448,6 @@ class Game {
             waterBtn.classList.remove('active');
         }
 
-        // Play button
         var playBtn = document.getElementById('play-btn');
         var playLabel = playBtn.querySelector('.btn-label');
         var playIcon = playBtn.querySelector('.btn-icon');
@@ -470,35 +461,30 @@ class Game {
             playIcon.textContent = '\u25B6';
         }
 
-        // Mute button
         var muteBtn = document.getElementById('mute-btn');
         muteBtn.textContent = this.muted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
 
-        // Plots
-        for (var i = 0; i < this.plots.length; i++) {
-            var plot = this.plots[i];
+        for (var j = 0; j < this.plots.length; j++) {
+            var plot = this.plots[j];
             var el = plot.element;
 
-            // Water mode highlight
             if (this.waterMode && plot.planted) {
                 el.classList.add('water-mode');
             } else {
                 el.classList.remove('water-mode');
             }
 
-            // Can-plant highlight
             if (!plot.planted && !this.waterMode && this.selectedPlantType) {
                 el.classList.add('can-plant');
             } else {
                 el.classList.remove('can-plant');
             }
 
-            // Water level indicator
             var indicator = el.querySelector('.water-level-indicator');
             if (indicator) {
                 if (plot.planted && plot.waterLevel > 0) {
                     var html = '';
-                    for (var j = 0; j < plot.waterLevel; j++) {
+                    for (var k = 0; k < plot.waterLevel; k++) {
                         html += '<span class="water-dot"></span>';
                     }
                     indicator.innerHTML = html;
