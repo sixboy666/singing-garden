@@ -80,6 +80,7 @@ class AudioEngine {
      */
     playNote(audioConfig, waterLevel, specificFreq) {
         if (!this.initialized || this.muted) return;
+        if (!audioConfig || !audioConfig.waterEffects || !audioConfig.notes) return;
 
         const wl = Math.max(0, Math.min(waterLevel, 3));
         const water = audioConfig.waterEffects[wl];
