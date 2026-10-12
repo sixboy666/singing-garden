@@ -1,0 +1,1291 @@
+/* ============================================
+   SINGING GARDEN - Stylesheet
+   Enhanced with unique per-plant animations
+   and creative UI design
+   ============================================ */
+
+/* ---------- Reset & Base ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ---------- CSS Variables ---------- */
+:root {
+    --sky-top: #6EC6FF;
+    --sky-bottom: #C7E9FB;
+    --grass-top: #5BA838;
+    --grass-bottom: #3D7A24;
+    --soil: #8B5E3C;
+    --soil-dark: #6B4423;
+    --ui-bg: rgba(255, 255, 255, 0.92);
+    --ui-border: rgba(255, 255, 255, 0.6);
+    --shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.2);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-lg: 24px;
+    --accent: #FF8C42;
+    --accent-dark: #E67333;
+    --text: #333;
+    --text-light: #666;
+    --magic-1: #FF6B9D;
+    --magic-2: #4FC3F7;
+    --magic-3: #FFD700;
+}
+
+/* ---------- Game Container ---------- */
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ---------- Screens ---------- */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.5s ease;
+}
+
+.screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ---------- Start Screen ---------- */
+#start-screen {
+    background: linear-gradient(135deg, #6EC6FF 0%, #B388FF 35%, #FF8A65 70%, #FFD54F 100%);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    overflow: hidden;
+}
+
+/* Animated background orbs on start screen */
+#start-screen::before,
+#start-screen::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.3;
+    animation: orbFloat 12s ease-in-out infinite;
+}
+
+#start-screen::before {
+    width: 300px;
+    height: 300px;
+    background: #FF6B9D;
+    top: -50px;
+    left: -50px;
+    animation-delay: 0s;
+}
+
+#start-screen::after {
+    width: 250px;
+    height: 250px;
+    background: #4FC3F7;
+    bottom: -30px;
+    right: -30px;
+    animation-delay: -6s;
+}
+
+.start-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 500px;
+    animation: fadeInUp 0.8s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.title-decoration {
+    position: relative;
+    height: 60px;
+    margin-bottom: 10px;
+}
+
+.floating-note {
+    position: absolute;
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.8);
+    animation: floatNote 3s ease-in-out infinite;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.note-1 { left: 20%; animation-delay: 0s; }
+.note-2 { left: 45%; animation-delay: 0.5s; }
+.note-3 { left: 65%; animation-delay: 1s; }
+.note-4 { left: 85%; animation-delay: 1.5s; }
+
+.game-title {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #FFE082 50%, #FF8A65 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.15)) drop-shadow(4px 4px 20px rgba(0, 0, 0, 0.1));
+    animation: titlePulse 3s ease-in-out infinite;
+}
+
+.game-subtitle {
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.15);
+    margin-bottom: 36px;
+    line-height: 1.6;
+    font-weight: 600;
+}
+
+.hint-text {
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+.big-btn {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #FF8C42, #FF6B35);
+    border: none;
+    border-radius: 50px;
+    padding: 16px 48px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.big-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.big-btn:hover::before {
+    left: 100%;
+}
+
+.big-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+}
+
+.big-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+}
+
+.icon-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    font-size: 1.1rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s ease, background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+    background: #fff;
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+/* ---------- Garden Screen ---------- */
+#garden-screen {
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 50%, #E8F5E9 100%);
+}
+
+/* Header */
+#header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,245,230,0.9));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    z-index: 5;
+    flex-shrink: 0;
+    border-bottom: 3px solid transparent;
+    border-image: linear-gradient(90deg, #FF8C42, #4FC3F7, #66BB6A, #FFD700) 1;
+}
+
+#header h2 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #FF8C42, #FF6B9D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+#header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+/* Garden Area */
+#garden-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 0;
+}
+
+#sky-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.sun {
+    position: absolute;
+    top: 30px;
+    right: 60px;
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, #FFE066 30%, #FFD43B 60%, transparent 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 40px 10px rgba(255, 212, 59, 0.4);
+    animation: sunPulse 4s ease-in-out infinite;
+}
+
+/* Sun rays */
+.sun::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0%, rgba(255,212,59,0.15) 5%, transparent 10%, rgba(255,212,59,0.15) 15%, transparent 20%, rgba(255,212,59,0.15) 25%, transparent 30%, rgba(255,212,59,0.15) 35%, transparent 40%, rgba(255,212,59,0.15) 45%, transparent 50%, rgba(255,212,59,0.15) 55%, transparent 60%, rgba(255,212,59,0.15) 65%, transparent 70%, rgba(255,212,59,0.15) 75%, transparent 80%, rgba(255,212,59,0.15) 85%, transparent 90%, rgba(255,212,59,0.15) 95%, transparent 100%);
+    animation: sunRays 20s linear infinite;
+}
+
+.cloud {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 100px;
+    filter: blur(0.5px);
+}
+
+.cloud::before,
+.cloud::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+}
+
+.cloud-1 {
+    width: 80px;
+    height: 28px;
+    top: 40px;
+    left: 8%;
+    animation: drift 25s linear infinite;
+}
+.cloud-1::before { width: 35px; height: 35px; top: -15px; left: 15px; }
+.cloud-1::after { width: 25px; height: 25px; top: -10px; right: 15px; }
+
+.cloud-2 {
+    width: 100px;
+    height: 32px;
+    top: 80px;
+    left: 50%;
+    animation: drift 35s linear infinite;
+    animation-delay: -10s;
+}
+.cloud-2::before { width: 40px; height: 40px; top: -18px; left: 20px; }
+.cloud-2::after { width: 30px; height: 30px; top: -12px; right: 20px; }
+
+.cloud-3 {
+    width: 70px;
+    height: 24px;
+    top: 120px;
+    left: 25%;
+    animation: drift 30s linear infinite;
+    animation-delay: -15s;
+}
+.cloud-3::before { width: 30px; height: 30px; top: -13px; left: 12px; }
+.cloud-3::after { width: 22px; height: 22px; top: -9px; right: 12px; }
+
+/* Flying birds */
+.bird {
+    position: absolute;
+    width: 20px;
+    height: 8px;
+    animation: birdFly 15s linear infinite;
+}
+
+.bird::before, .bird::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 8px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-radius: 50%;
+    border-color: rgba(0,0,0,0.2) transparent transparent transparent;
+    animation: birdFlap 0.3s ease-in-out infinite alternate;
+}
+
+.bird::before { left: 0; }
+.bird::after { right: 0; }
+
+.bird-1 { top: 60px; animation-delay: 0s; }
+.bird-2 { top: 100px; animation-delay: -7s; }
+
+/* Grass */
+#grass-layer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: linear-gradient(180deg, var(--grass-top) 0%, var(--grass-bottom) 100%);
+    z-index: 2;
+}
+
+#grass-layer::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    background-image:
+        radial-gradient(ellipse 8px 12px at 10% 100%, var(--grass-top) 50%, transparent 51%),
+        radial-gradient(ellipse 8px 12px at 30% 100%, var(--grass-top) 50%, transparent 51%),
+        radial-gradient(ellipse 8px 12px at 50% 100%, var(--grass-top) 50%, transparent 51%),
+        radial-gradient(ellipse 8px 12px at 70% 100%, var(--grass-top) 50%, transparent 51%),
+        radial-gradient(ellipse 8px 12px at 90% 100%, var(--grass-top) 50%, transparent 51%);
+    background-size: 40px 12px;
+    background-repeat: repeat-x;
+}
+
+/* Grass blades swaying */
+#grass-layer::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 5%;
+    width: 3px;
+    height: 15px;
+    background: var(--grass-top);
+    border-radius: 50% 50% 0 0;
+    box-shadow:
+        20px 0 0 var(--grass-top),
+        40px 2px 0 #6BB83E,
+        60px 0 0 var(--grass-top),
+        80px 3px 0 #6BB83E,
+        100px 0 0 var(--grass-top),
+        120px 2px 0 #6BB83E,
+        140px 0 0 var(--grass-top),
+        160px 3px 0 #6BB83E,
+        180px 0 0 var(--grass-top),
+        200px 2px 0 #6BB83E;
+    animation: grassSway 3s ease-in-out infinite;
+    transform-origin: bottom center;
+}
+
+/* Plots Container - 4x2 grid for 8 plots */
+#plots-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+    width: min(680px, 95vw);
+    height: min(320px, 45vh);
+    margin-bottom: 25px;
+    z-index: 3;
+    position: relative;
+    padding: 10px;
+}
+
+/* Plot */
+.plot {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    border-radius: 50% 50% 12px 12px / 30% 30% 12px 12px;
+    background: radial-gradient(ellipse at center top, #7A5230 0%, var(--soil) 40%, var(--soil-dark) 100%);
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+    overflow: visible;
+}
+
+.plot:hover {
+    transform: translateY(-3px);
+}
+
+.plot:active {
+    transform: translateY(1px);
+}
+
+.plot.water-mode {
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.2), 0 0 15px rgba(79, 195, 247, 0.5);
+}
+
+.plot.can-plant {
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.2), 0 0 12px rgba(255, 200, 0, 0.4);
+}
+
+.plot.can-plant::after {
+    content: '+';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 700;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.plot:hover.can-plant::after {
+    opacity: 0;
+}
+
+.plot.plot-singing {
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.2), 0 0 18px rgba(255, 230, 100, 0.5);
+}
+
+/* Water level indicator */
+.water-level-indicator {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.water-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4FC3F7;
+    box-shadow: 0 0 5px rgba(79, 195, 247, 0.7);
+    animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+.water-dot:nth-child(2) { animation-delay: 0.2s; }
+.water-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Soil texture */
+.soil {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.soil::before {
+    content: '';
+    position: absolute;
+    top: 15%;
+    left: 20%;
+    width: 6px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 50%;
+    box-shadow:
+        25px 10px 0 rgba(0, 0, 0, 0.1),
+        -15px 20px 0 rgba(0, 0, 0, 0.12),
+        40px 30px 0 rgba(0, 0, 0, 0.08),
+        10px 45px 0 rgba(0, 0, 0, 0.1),
+        60px 15px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Plant Container */
+.plant-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1;
+}
+
+.plant-sway-wrapper {
+    transform-origin: bottom center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.plant-sing-wrapper {
+    transform-origin: bottom center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.plant-svg {
+    width: 85%;
+    height: 95%;
+    max-height: 140px;
+    pointer-events: none;
+}
+
+/* ============================================
+   PER-PLANT SWAY ANIMATIONS (idle)
+   Each plant has a completely unique idle motion
+   ============================================ */
+
+/* 1. Sunflare - gentle rotational sway + slight scale */
+.plant-swaying.anim-sunflare .plant-sway-wrapper {
+    animation: swaySunflare 3.5s ease-in-out infinite;
+}
+@keyframes swaySunflare {
+    0%, 100% { transform: rotate(-3deg) scale(1); }
+    50% { transform: rotate(3deg) scale(1.02); }
+}
+
+/* 2. Toadstool - bob up and down */
+.plant-swaying.anim-toadstool .plant-sway-wrapper {
+    animation: bobToadstool 2.8s ease-in-out infinite;
+}
+@keyframes bobToadstool {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(-6px) scaleY(0.97); }
+}
+
+/* 3. Bluebelle - bell swing left-right */
+.plant-swaying.anim-bluebelle .plant-sway-wrapper {
+    animation: swingBluebelle 2.5s ease-in-out infinite;
+    transform-origin: top center;
+}
+@keyframes swingBluebelle {
+    0%, 100% { transform: rotate(-5deg); }
+    25% { transform: rotate(3deg); }
+    50% { transform: rotate(5deg); }
+    75% { transform: rotate(-3deg); }
+}
+
+/* 4. Prickle - subtle vertical squish */
+.plant-swaying.anim-prickle .plant-sway-wrapper {
+    animation: squishPrickle 4s ease-in-out infinite;
+}
+@keyframes squishPrickle {
+    0%, 100% { transform: scaleY(1) scaleX(1); }
+    50% { transform: scaleY(0.96) scaleX(1.04); }
+}
+
+/* 5. Fernella - wave unfurl from base */
+.plant-swaying.anim-fernella .plant-sway-wrapper {
+    animation: waveFernella 3s ease-in-out infinite;
+}
+@keyframes waveFernella {
+    0%, 100% { transform: skewX(-3deg) rotate(-1deg); }
+    50% { transform: skewX(3deg) rotate(1deg); }
+}
+
+/* 6. Lumipetal - float up/down with glow */
+.plant-swaying.anim-lumipetal .plant-sway-wrapper {
+    animation: floatLumipetal 3s ease-in-out infinite;
+}
+@keyframes floatLumipetal {
+    0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+    50% { transform: translateY(-5px) scale(1.03); filter: brightness(1.2); }
+}
+
+/* 7. Snapdragon - gentle sway with jaw wiggle */
+.plant-swaying.anim-snapdragon .plant-sway-wrapper {
+    animation: swaySnapdragon 2.2s ease-in-out infinite;
+}
+@keyframes swaySnapdragon {
+    0%, 100% { transform: rotate(-4deg) scaleY(1); }
+    30% { transform: rotate(2deg) scaleY(1.05); }
+    50% { transform: rotate(4deg) scaleY(0.98); }
+    70% { transform: rotate(-2deg) scaleY(1.03); }
+}
+
+/* 8. Bubblebloom - side-to-side float */
+.plant-swaying.anim-bubblebloom .plant-sway-wrapper {
+    animation: floatBubblebloom 3.5s ease-in-out infinite;
+}
+@keyframes floatBubblebloom {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    25% { transform: translateX(4px) translateY(-3px); }
+    50% { transform: translateX(0) translateY(-5px); }
+    75% { transform: translateX(-4px) translateY(-3px); }
+}
+
+/* 9. Chimesprout - chime sway */
+.plant-swaying.anim-chimesprout .plant-sway-wrapper {
+    animation: chimeSway 2s ease-in-out infinite;
+    transform-origin: top center;
+}
+@keyframes chimeSway {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(6deg); }
+}
+
+/* 10. Dancylily - spin dance */
+.plant-swaying.anim-dancylily .plant-sway-wrapper {
+    animation: danceLily 4s ease-in-out infinite;
+}
+@keyframes danceLily {
+    0% { transform: rotate(0deg) translateY(0); }
+    25% { transform: rotate(8deg) translateY(-3px); }
+    50% { transform: rotate(0deg) translateY(-5px); }
+    75% { transform: rotate(-8deg) translateY(-3px); }
+    100% { transform: rotate(0deg) translateY(0); }
+}
+
+/* 11. Drumroot - bounce thump */
+.plant-swaying.anim-drumroot .plant-sway-wrapper {
+    animation: bounceDrumroot 1.5s ease-in-out infinite;
+}
+@keyframes bounceDrumroot {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(-4px) scaleY(1.05); }
+}
+
+/* 12. Crystalotus - shimmer twinkle */
+.plant-swaying.anim-crystalotus .plant-sway-wrapper {
+    animation: shimmerCrystalotus 3s ease-in-out infinite;
+}
+@keyframes shimmerCrystalotus {
+    0%, 100% { transform: rotate(0deg) scale(1); filter: brightness(1) hue-rotate(0deg); }
+    33% { transform: rotate(3deg) scale(1.05); filter: brightness(1.3) hue-rotate(15deg); }
+    66% { transform: rotate(-3deg) scale(1.02); filter: brightness(1.15) hue-rotate(-10deg); }
+}
+
+/* ============================================
+   PER-PLANT SINGING ANIMATIONS (on click)
+   Each plant reacts uniquely when singing
+   ============================================ */
+
+/* 1. Sunflare - petal burst outward */
+.plant-singing.anim-sunflare .plant-sing-wrapper {
+    animation: singSunflare 0.6s ease-in-out;
+}
+@keyframes singSunflare {
+    0%, 100% { transform: scale(1) rotate(0); }
+    30% { transform: scale(1.15) rotate(5deg); }
+    60% { transform: scale(1.08) rotate(-3deg); }
+}
+
+/* 2. Toadstool - cap squish bounce */
+.plant-singing.anim-toadstool .plant-sing-wrapper {
+    animation: singToadstool 0.6s ease-in-out;
+}
+@keyframes singToadstool {
+    0%, 100% { transform: scale(1) translateY(0); }
+    30% { transform: scaleY(0.85) scaleX(1.15) translateY(-5px); }
+    60% { transform: scaleY(1.1) scaleX(0.95) translateY(0); }
+}
+
+/* 3. Bluebelle - bell ring fast */
+.plant-singing.anim-bluebelle .plant-sing-wrapper {
+    animation: singBluebelle 0.5s ease-in-out;
+    transform-origin: top center;
+}
+@keyframes singBluebelle {
+    0%, 100% { transform: rotate(0); }
+    20% { transform: rotate(12deg); }
+    40% { transform: rotate(-10deg); }
+    60% { transform: rotate(8deg); }
+    80% { transform: rotate(-4deg); }
+}
+
+/* 4. Prickle - shake vigorously */
+.plant-singing.anim-prickle .plant-sing-wrapper {
+    animation: singPrickle 0.4s ease-in-out;
+}
+@keyframes singPrickle {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+}
+
+/* 5. Fernella - big unfurl wave */
+.plant-singing.anim-fernella .plant-sing-wrapper {
+    animation: singFernella 0.7s ease-out;
+}
+@keyframes singFernella {
+    0% { transform: scaleY(0.7) skewX(0); }
+    40% { transform: scaleY(1.2) skewX(8deg); }
+    70% { transform: scaleY(1.05) skewX(-4deg); }
+    100% { transform: scaleY(1) skewX(0); }
+}
+
+/* 6. Lumipetal - glow pulse + spin */
+.plant-singing.anim-lumipetal .plant-sing-wrapper {
+    animation: singLumipetal 0.8s ease-in-out;
+}
+@keyframes singLumipetal {
+    0%, 100% { transform: scale(1) rotate(0); filter: brightness(1); }
+    50% { transform: scale(1.2) rotate(360deg); filter: brightness(1.5); }
+}
+
+/* 7. Snapdragon - jaw snap open */
+.plant-singing.anim-snapdragon .plant-sing-wrapper {
+    animation: singSnapdragon 0.5s ease-out;
+    transform-origin: bottom center;
+}
+@keyframes singSnapdragon {
+    0%, 100% { transform: scaleY(1) rotate(0); }
+    30% { transform: scaleY(1.2) rotate(3deg); }
+    60% { transform: scaleY(0.95) rotate(-2deg); }
+}
+
+/* 8. Bubblebloom - bubble pop bounce */
+.plant-singing.anim-bubblebloom .plant-sing-wrapper {
+    animation: singBubblebloom 0.6s ease-out;
+}
+@keyframes singBubblebloom {
+    0% { transform: scale(0.9); }
+    40% { transform: scale(1.18) translateY(-8px); }
+    70% { transform: scale(0.98) translateY(2px); }
+    100% { transform: scale(1); }
+}
+
+/* 9. Chimesprout - rapid chime */
+.plant-singing.anim-chimesprout .plant-sing-wrapper {
+    animation: singChimesprout 0.6s ease-in-out;
+    transform-origin: top center;
+}
+@keyframes singChimesprout {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(15deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(10deg); }
+    60% { transform: rotate(-8deg); }
+    80% { transform: rotate(4deg); }
+}
+
+/* 10. Dancylily - fast spin */
+.plant-singing.anim-dancylily .plant-sing-wrapper {
+    animation: singDancylily 0.7s ease-in-out;
+}
+@keyframes singDancylily {
+    0% { transform: rotate(0) scale(1); }
+    50% { transform: rotate(360deg) scale(1.15); }
+    100% { transform: rotate(720deg) scale(1); }
+}
+
+/* 11. Drumroot - thump bounce */
+.plant-singing.anim-drumroot .plant-sing-wrapper {
+    animation: singDrumroot 0.4s ease-out;
+}
+@keyframes singDrumroot {
+    0%, 100% { transform: scaleY(1) translateY(0); }
+    40% { transform: scaleY(1.3) scaleX(0.9) translateY(3px); }
+    70% { transform: scaleY(0.95) scaleX(1.05) translateY(-2px); }
+}
+
+/* 12. Crystalotus - twinkle burst */
+.plant-singing.anim-crystalotus .plant-sing-wrapper {
+    animation: singCrystalotus 0.8s ease-in-out;
+}
+@keyframes singCrystalotus {
+    0%, 100% { transform: scale(1) rotate(0); filter: brightness(1); }
+    30% { transform: scale(1.25) rotate(180deg); filter: brightness(1.6); }
+    60% { transform: scale(1.08) rotate(300deg); filter: brightness(1.3); }
+}
+
+/* Growing animation (shared) */
+.plant-growing .plant-sway-wrapper {
+    animation: grow 0.6s ease-out;
+}
+
+/* Controls Bar */
+#controls-bar {
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,250,240,0.92));
+    box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+    padding: 10px 16px 14px;
+    z-index: 5;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #FFD700, #FF8C42, #FF6B9D, #4FC3F7) 1;
+}
+
+#plant-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.selector-label {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+#plant-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.plant-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 2px solid transparent;
+    background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--text);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plant-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.plant-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.plant-btn:hover::before {
+    opacity: 1;
+}
+
+.plant-btn.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #FFF5E6, #FFE8D1);
+    box-shadow: 0 2px 8px rgba(255, 140, 66, 0.3);
+    transform: translateY(-1px);
+}
+
+.plant-btn-emoji {
+    font-size: 1.05rem;
+}
+
+#action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.4s ease;
+}
+
+.action-btn:hover::before {
+    left: 100%;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.water-btn {
+    background: linear-gradient(135deg, #4FC3F7, #29B6F6);
+}
+
+.water-btn.active {
+    filter: brightness(1.15);
+    box-shadow: 0 0 15px rgba(79, 195, 247, 0.6);
+    animation: pulseBlue 1.5s ease-in-out infinite;
+}
+
+.play-btn {
+    background: linear-gradient(135deg, #66BB6A, #4CAF50);
+}
+
+.play-btn.playing {
+    background: linear-gradient(135deg, #EF5350, #E53935);
+    animation: pulseRed 1s ease-in-out infinite;
+}
+
+.clear-btn {
+    background: linear-gradient(135deg, #BDBDBD, #9E9E9E);
+}
+
+.btn-icon {
+    font-size: 1rem;
+}
+
+/* Help Modal */
+.modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: opacity 0.3s ease;
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #fff, #FFF8E1);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 140, 66, 0.15);
+    text-align: center;
+    animation: modalPop 0.3s ease;
+    border: 2px solid rgba(255, 140, 66, 0.15);
+}
+
+.modal-content h2 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, #FF8C42, #FF6B9D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+}
+
+.help-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.help-section:last-of-type {
+    border-bottom: none;
+}
+
+.help-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+    animation: helpIconBounce 2s ease-in-out infinite;
+}
+
+.help-section h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+}
+
+.help-section p {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+#close-help-btn {
+    margin-top: 10px;
+    font-size: 1rem;
+    padding: 12px 32px;
+}
+
+/* Effects Canvas */
+#effects-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+/* ---------- Keyframe Animations ---------- */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatNote {
+    0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.8; }
+    50% { transform: translateY(-15px) rotate(10deg); opacity: 1; }
+}
+
+@keyframes titlePulse {
+    0%, 100% { filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.15)) drop-shadow(4px 4px 20px rgba(0,0,0,0.1)); }
+    50% { filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.15)) drop-shadow(4px 4px 30px rgba(255,140,66,0.3)); }
+}
+
+@keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.1); }
+    66% { transform: translate(-20px, 30px) scale(0.9); }
+}
+
+@keyframes sunPulse {
+    0%, 100% { box-shadow: 0 0 40px 10px rgba(255, 212, 59, 0.4); }
+    50% { box-shadow: 0 0 50px 15px rgba(255, 212, 59, 0.5); }
+}
+
+@keyframes sunRays {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes drift {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(calc(100vw + 200px)); }
+}
+
+@keyframes birdFly {
+    from { transform: translateX(-50px) translateY(0); }
+    50% { transform: translateX(50vw) translateY(-10px); }
+    to { transform: translateX(calc(100vw + 50px)) translateY(0); }
+}
+
+@keyframes birdFlap {
+    from { transform: scaleY(1); }
+    to { transform: scaleY(0.5); }
+}
+
+@keyframes grassSway {
+    0%, 100% { transform: skewX(0deg); }
+    50% { transform: skewX(3deg); }
+}
+
+@keyframes grow {
+    0% { transform: scale(0) translateY(10px); opacity: 0; }
+    60% { transform: scale(1.1) translateY(0); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes pulseBlue {
+    0%, 100% { box-shadow: 0 0 10px rgba(79, 195, 247, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(79, 195, 247, 0.8); }
+}
+
+@keyframes pulseRed {
+    0%, 100% { box-shadow: 0 0 8px rgba(239, 83, 80, 0.5); }
+    50% { box-shadow: 0 0 16px rgba(239, 83, 80, 0.8); }
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes helpIconBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px) {
+    .game-title {
+        font-size: 2.5rem;
+    }
+
+    .game-subtitle {
+        font-size: 1rem;
+    }
+
+    #header h2 {
+        font-size: 1.2rem;
+    }
+
+    #plots-container {
+        width: 95vw;
+        height: 42vh;
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .plant-svg {
+        max-height: 100px;
+    }
+
+    #plant-selector {
+        justify-content: center;
+    }
+
+    .selector-label {
+        display: none;
+    }
+
+    .plant-btn {
+        padding: 4px 6px;
+        font-size: 0.72rem;
+        gap: 3px;
+    }
+
+    .plant-btn-name {
+        display: none;
+    }
+
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .btn-label {
+        display: none;
+    }
+
+    .btn-icon {
+        font-size: 1.2rem;
+    }
+
+    .sun {
+        width: 45px;
+        height: 45px;
+        top: 15px;
+        right: 20px;
+    }
+
+    .bird {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) and (min-width: 601px) {
+    .plant-btn-name {
+        display: none;
+    }
+}
+
+@media (max-height: 500px) {
+    #plots-container {
+        height: 38vh;
+    }
+
+    #grass-layer {
+        height: 50px;
+    }
+}
+
+@media (min-width: 1280px) {
+    #plots-container {
+        width: 720px;
+        height: 340px;
+    }
+}
