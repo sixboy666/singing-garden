@@ -77,23 +77,30 @@ class Game {
     /* Play a C major arpeggio as a welcome sound */
     playWelcomeSound() {
         var self = this;
-        var notes = [261.63, 329.63, 392.00, 523.25];
         var config = {
-            waveform: 'sine',
-            envelope: { attack: 0.05, decay: 0.1, sustain: 0.5, release: 0.3 },
-            noteDuration: 0.2,
-            filterFreq: 4000,
-            filterQ: 1,
-            reverb: 0.25,
-            delay: 0,
-            volume: 0.15,
-            waterEffects: [{ pitchMultiplier: 1, vibrato: 0, reverbBoost: 0, harmonicBoost: 0 }]
+            waveform: 'triangle',
+            envelope: { attack: 0.05, decay: 0.15, sustain: 0.5, release: 0.5 },
+            noteDuration: 0.3,
+            filterFreq: 4500,
+            filterQ: 1.5,
+            reverb: 0.4,
+            delay: 0.2,
+            volume: 0.18,
+            harmonics: [1, 0.5, 0.25],
+            notes: [261.63, 329.63, 392.00, 523.25, 659.25],
+            waterEffects: [
+                { pitchMultiplier: 1, vibrato: 0, reverbBoost: 0, harmonicBoost: 0, delayBoost: 0 },
+                { pitchMultiplier: 1, vibrato: 1, reverbBoost: 0.15, harmonicBoost: 1, delayBoost: 0.1 },
+                { pitchMultiplier: 1, vibrato: 2, reverbBoost: 0.3, harmonicBoost: 2, delayBoost: 0.2 },
+                { pitchMultiplier: 1, vibrato: 3, reverbBoost: 0.45, harmonicBoost: 3, delayBoost: 0.3 }
+            ]
         };
-        notes.forEach(function(freq, i) {
-            setTimeout(function() {
-                self.audio.playNote(config, 0, freq);
-            }, i * 130);
-        });
+        /* Ascending C major arpeggio with sparkle */
+        this.audio.playArpeggio(config, 0, [261.63, 329.63, 392.00, 523.25, 659.25]);
+        /* Then a resolving chord */
+        setTimeout(function() {
+            self.audio.playChord(config, 1, [261.63, 329.63, 392.00]);
+        }, 700);
     }
 
     /* ---- Plot creation (8 plots in 4x2 grid) ---- */
@@ -273,8 +280,10 @@ class Game {
             container.classList.remove('plant-growing');
         }, 600);
 
-        this.audio.playNote(plant.audio, 0);
+        /* Play a chord on planting for a warm welcome */
+        this.audio.playChord(plant.audio, 0);
         this.effects.spawnSparkles(plot.element);
+        this.effects.spawnPetals(plot.element, plant.colors.primary);
         this.updateUI();
     }
 
@@ -286,11 +295,16 @@ class Game {
         if (!plant) return;
 
         var self = this;
-        plant.audio.notes.forEach(function(note, i) {
+
+        /* Catchy arpeggio: notes play in sequence with built-in delay + reverb */
+        this.audio.playArpeggio(plant.audio, plot.waterLevel);
+
+        /* Layer a chord on top for harmonic richness when well-watered */
+        if (plot.waterLevel >= 2) {
             setTimeout(function() {
-                self.audio.playNote(plant.audio, plot.waterLevel, note);
-            }, i * 150);
-        });
+                self.audio.playChord(plant.audio, plot.waterLevel);
+            }, 80);
+        }
 
         /* Restart singing animation with plant's unique animClass */
         var container = plot.element.querySelector('.plant-container');
@@ -306,10 +320,18 @@ class Game {
             plot.element.classList.remove('plot-singing');
         }, 600);
 
+        /* Spawn floating notes + occasional petals/hearts for visual delight */
         plant.audio.notes.forEach(function(note, i) {
             setTimeout(function() {
                 self.effects.spawnNote(plot.element, plant.colors.primary);
-            }, i * 150);
+                if (i === 0 && Math.random() < 0.4) {
+                    self.effects.spawnPetals(plot.element, plant.colors.secondary);
+                }
+                if (i === plant.audio.notes.length - 1 && plot.waterLevel >= 2 && Math.random() < 0.5) {
+                    self.effects.spawnHearts(plot.element);
+                    self.effects.spawnLightRays(plot.element);
+                }
+            }, i * 110);
         });
     }
 
