@@ -42,7 +42,7 @@ class EffectsCanvas {
             vx: (Math.random() - 0.5) * 0.3,
             vy: -0.15 - Math.random() * 0.25,
             size: 1.5 + Math.random() * 2.5,
-            color: ['#FFD700', '#FF6BD8', '#4FD8E8', '#FFFFFF', '#7AD06A'][Math.floor(Math.random() * 5)],
+            color: ['#d4af37', '#c97a8c', '#5a9ba8', '#f5ebd7', '#6b8e7f'][Math.floor(Math.random() * 5)],
             wobble: Math.random() * Math.PI * 2,
             wobbleSpeed: 0.02 + Math.random() * 0.02,
             opacity: 0.3 + Math.random() * 0.35
@@ -109,7 +109,7 @@ class EffectsCanvas {
                 life: 1.0,
                 decay: 0.018,
                 size: 3 + Math.random() * 3,
-                color: '#4FC3F7',
+                color: '#5a9ba8',
                 gravity: 0.18
             });
         }
@@ -131,7 +131,7 @@ class EffectsCanvas {
                 life: 1.0,
                 decay: 0.012,
                 size: 2.5 + Math.random() * 3.5,
-                color: ['#FFD700', '#FF6BD8', '#4FD8E8', '#FFFFFF'][Math.floor(Math.random() * 4)],
+                color: ['#d4af37', '#c97a8c', '#5a9ba8', '#f5ebd7'][Math.floor(Math.random() * 4)],
                 gravity: 0.06,
                 twinkle: Math.random() * Math.PI * 2
             });
@@ -152,7 +152,7 @@ class EffectsCanvas {
                 life: 1.0,
                 decay: 0.008,
                 size: 14 + Math.random() * 8,
-                color: ['#FF6B9D', '#FF8FB1', '#FFB6C1'][Math.floor(Math.random() * 3)],
+                color: ['#c97a8c', '#e0a0b0', '#b88a9a'][Math.floor(Math.random() * 3)],
                 rotation: (Math.random() - 0.5) * 0.4,
                 rotSpeed: (Math.random() - 0.5) * 0.02,
                 wobble: Math.random() * Math.PI * 2
@@ -174,7 +174,7 @@ class EffectsCanvas {
                 life: 1.0,
                 decay: 0.007,
                 size: 6 + Math.random() * 5,
-                color: color || '#FF6BD8',
+                color: color || '#c97a8c',
                 rotation: Math.random() * Math.PI * 2,
                 rotSpeed: (Math.random() - 0.5) * 0.08,
                 wobble: Math.random() * Math.PI * 2,
@@ -201,7 +201,7 @@ class EffectsCanvas {
                 maxLength: 80 + Math.random() * 40,
                 life: 1.0,
                 decay: 0.02,
-                color: '#FFD700',
+                color: '#d4af37',
                 width: 2 + Math.random() * 2
             });
         }
@@ -312,109 +312,101 @@ class EffectsCanvas {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (p.syllable) {
-                /* New School tattoo syllable critter: bold colored bubble
-                   with thick black outline, big googly eyes with white teeth grin. */
-                ctx.font = '900 ' + Math.round(p.size * 0.72) + 'px Fredoka, Nunito, sans-serif';
-                /* Measure syllable for bubble background */
-                var tw = ctx.measureText(p.syllable).width;
-                var bw = tw + p.size * 0.7;
-                var bh = p.size * 0.95;
-                /* Bubble background */
-                ctx.shadowColor = p.color;
-                ctx.shadowBlur = 16;
-                ctx.fillStyle = p.color;
+                /* Premium syllable critter: refined bubble with elegant warm-ink
+               outline, half-lidded dreamy eyes, soft gentle smile. */
+            ctx.font = '700 ' + Math.round(p.size * 0.72) + 'px Fredoka, Nunito, sans-serif';
+            /* Measure syllable for bubble background */
+            var tw = ctx.measureText(p.syllable).width;
+            var bw = tw + p.size * 0.7;
+            var bh = p.size * 0.95;
+            /* Bubble background */
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            var br = bh * 0.5;
+            ctx.moveTo(-bw / 2 + br, -bh / 2);
+            ctx.lineTo(bw / 2 - br, -bh / 2);
+            ctx.quadraticCurveTo(bw / 2, -bh / 2, bw / 2, -bh / 2 + br);
+            ctx.lineTo(bw / 2, bh / 2 - br);
+            ctx.quadraticCurveTo(bw / 2, bh / 2, bw / 2 - br, bh / 2);
+            ctx.lineTo(-bw / 2 + br, bh / 2);
+            ctx.quadraticCurveTo(-bw / 2, bh / 2, -bw / 2, bh / 2 - br);
+            ctx.lineTo(-bw / 2, -bh / 2 + br);
+            ctx.quadraticCurveTo(-bw / 2, -bh / 2, -bw / 2 + br, -bh / 2);
+            ctx.closePath();
+            ctx.fill();
+            /* Bubble outline (refined warm ink) */
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#1a1208';
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+            /* Inner highlight (top-left) */
+            ctx.fillStyle = 'rgba(245,235,215,0.22)';
+            ctx.beginPath();
+            ctx.ellipse(-bw * 0.18, -bh * 0.28, bw * 0.22, bh * 0.16, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            /* Syllable text - cream with warm-ink stroke */
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#1a1208';
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+            ctx.strokeText(p.syllable, 0, p.size * 0.05);
+            ctx.fillStyle = '#f5ebd7';
+            ctx.fillText(p.syllable, 0, p.size * 0.05);
+            /* Eyes above the bubble - half-lidded dreamy cream sclera + dark iris + catchlight */
+            var er = p.size * 0.18;
+            var eyY = -bh * 0.62;
+            for (var e = -1; e <= 1; e += 2) {
+                var ex = e * p.size * 0.28;
+                /* Cream sclera with refined warm-ink outline (half-lidded almond shape) */
+                ctx.fillStyle = '#f5ebd7';
+                ctx.strokeStyle = '#1a1208';
+                ctx.lineWidth = 1.4;
                 ctx.beginPath();
-                var br = bh * 0.5;
-                ctx.moveTo(-bw / 2 + br, -bh / 2);
-                ctx.lineTo(bw / 2 - br, -bh / 2);
-                ctx.quadraticCurveTo(bw / 2, -bh / 2, bw / 2, -bh / 2 + br);
-                ctx.lineTo(bw / 2, bh / 2 - br);
-                ctx.quadraticCurveTo(bw / 2, bh / 2, bw / 2 - br, bh / 2);
-                ctx.lineTo(-bw / 2 + br, bh / 2);
-                ctx.quadraticCurveTo(-bw / 2, bh / 2, -bw / 2, bh / 2 - br);
-                ctx.lineTo(-bw / 2, -bh / 2 + br);
-                ctx.quadraticCurveTo(-bw / 2, -bh / 2, -bw / 2 + br, -bh / 2);
-                ctx.closePath();
-                ctx.fill();
-                /* Bubble outline (bold black) */
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#0a0a0a';
-                ctx.lineWidth = 3.5;
-                ctx.stroke();
-                /* Inner highlight (top-left) */
-                ctx.fillStyle = 'rgba(255,255,255,0.25)';
-                ctx.beginPath();
-                ctx.ellipse(-bw * 0.18, -bh * 0.28, bw * 0.22, bh * 0.16, -0.4, 0, Math.PI * 2);
-                ctx.fill();
-                /* Syllable text - dark with white outline + black stroke */
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#0a0a0a';
-                ctx.lineJoin = 'round';
-                ctx.miterLimit = 2;
-                ctx.strokeText(p.syllable, 0, p.size * 0.05);
-                ctx.fillStyle = '#fffbe8';
-                ctx.fillText(p.syllable, 0, p.size * 0.05);
-                /* Eyes above the bubble - big white sclera + black pupil + catchlight */
-                var er = p.size * 0.18;
-                var eyY = -bh * 0.62;
-                for (var e = -1; e <= 1; e += 2) {
-                    var ex = e * p.size * 0.28;
-                    /* White sclera with bold black outline */
-                    ctx.fillStyle = '#fff';
-                    ctx.strokeStyle = '#0a0a0a';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(ex, eyY, er, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                    /* Black pupil (jitters with wobble) */
-                    ctx.fillStyle = '#0a0a0a';
-                    ctx.beginPath();
-                    ctx.arc(ex + Math.sin(p.wobble + e) * er * 0.35, eyY + er * 0.25, er * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    /* White catchlight */
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(ex + Math.sin(p.wobble + e) * er * 0.35 - er * 0.18, eyY + er * 0.1, er * 0.18, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                /* Eyebrows - angled manic energy */
-                ctx.strokeStyle = '#0a0a0a';
-                ctx.lineWidth = 2.5;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(-p.size * 0.4, eyY - er - 2);
-                ctx.lineTo(-p.size * 0.16, eyY - er * 0.7);
-                ctx.moveTo(p.size * 0.16, eyY - er * 0.7);
-                ctx.lineTo(p.size * 0.4, eyY - er - 2);
-                ctx.stroke();
-                /* Grinning mouth with white teeth under the bubble */
-                var my = bh * 0.5 + p.size * 0.22;
-                var mw = p.size * 0.32;
-                ctx.fillStyle = '#3a0a1a';
-                ctx.strokeStyle = '#0a0a0a';
-                ctx.lineWidth = 2.5;
-                ctx.lineJoin = 'round';
-                ctx.beginPath();
-                ctx.moveTo(-mw, my - mw * 0.2);
-                ctx.quadraticCurveTo(0, my + mw * 1.1, mw, my - mw * 0.2);
-                ctx.quadraticCurveTo(0, my - mw * 0.1, -mw, my - mw * 0.2);
+                ctx.moveTo(ex - er, eyY);
+                ctx.quadraticCurveTo(ex, eyY - er * 0.8, ex + er, eyY);
+                ctx.quadraticCurveTo(ex, eyY + er * 0.6, ex - er, eyY);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-                /* Teeth */
-                ctx.fillStyle = '#fff';
-                ctx.strokeStyle = '#0a0a0a';
-                ctx.lineWidth = 1;
-                for (var t = 0; t < 3; t++) {
-                    var tx = -mw * 0.62 + t * mw * 0.62;
-                    ctx.beginPath();
-                    ctx.rect(tx, my - mw * 0.15, mw * 0.5, mw * 0.55);
-                    ctx.fill();
-                    ctx.stroke();
-                }
+                /* Dark iris */
+                ctx.fillStyle = '#1a1208';
+                ctx.beginPath();
+                ctx.arc(ex + Math.sin(p.wobble + e) * er * 0.35, eyY + er * 0.25, er * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                /* Single catchlight */
+                ctx.fillStyle = '#f5ebd7';
+                ctx.beginPath();
+                ctx.arc(ex + Math.sin(p.wobble + e) * er * 0.35 - er * 0.18, eyY + er * 0.1, er * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            /* Soft arched brows — gentle, not manic */
+            ctx.strokeStyle = '#1a1208';
+            ctx.lineWidth = 1.6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-p.size * 0.4, eyY - er - 0.5);
+            ctx.quadraticCurveTo(-p.size * 0.28, eyY - er - 2, -p.size * 0.16, eyY - er - 0.5);
+            ctx.moveTo(p.size * 0.16, eyY - er - 0.5);
+            ctx.quadraticCurveTo(p.size * 0.28, eyY - er - 2, p.size * 0.4, eyY - er - 0.5);
+            ctx.stroke();
+            /* Soft closed-lip smile under the bubble */
+            var my = bh * 0.5 + p.size * 0.22;
+            var mw = p.size * 0.32;
+            ctx.fillStyle = '#8a4a5a';
+            ctx.strokeStyle = '#1a1208';
+            ctx.lineWidth = 1.6;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-mw, my - mw * 0.2);
+            ctx.quadraticCurveTo(0, my + mw * 0.85, mw, my - mw * 0.2);
+            ctx.quadraticCurveTo(0, my - mw * 0.1, -mw, my - mw * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
             } else {
                 ctx.fillStyle = p.color;
                 ctx.font = 'bold ' + p.size + 'px serif';
