@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Singing Garden</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -67,6 +67,10 @@
                         <span class="btn-icon">&#9654;</span>
                         <span class="btn-label">Play Melody</span>
                     </button>
+                    <button id="chaos-btn" class="action-btn chaos-btn" title="Chaos choir: everyone sings at once!">
+                        <span class="btn-icon">&#129315;</span>
+                        <span class="btn-label">Chaos!</span>
+                    </button>
                     <button id="clear-btn" class="action-btn clear-btn" title="Clear all plants">
                         <span class="btn-icon">&#128465;</span>
                         <span class="btn-label">Clear All</span>
@@ -99,6 +103,11 @@
                     <h3>Melody</h3>
                     <p>Plant different flowers and press Play Melody to hear them sing together!</p>
                 </div>
+                <div class="help-section">
+                    <span class="help-icon">&#129315;</span>
+                    <h3>Chaos!</h3>
+                    <p>Every plant sings at once in a gloriously absurd choir. Nobody is in tune. That's the point.</p>
+                </div>
                 <button id="close-help-btn" class="big-btn">Got it!</button>
             </div>
         </div>
@@ -107,9 +116,9 @@
         <canvas id="effects-canvas"></canvas>
     </div>
 
-    <script src="js/audio.js?v=2"></script>
-    <script src="js/plants.js?v=2"></script>
-    <script src="js/effects.js?v=2"></script>
-    <script src="js/game.js?v=2"></script>
+    <script src="js/audio.js?v=3"></script>
+    <script src="js/plants.js?v=3"></script>
+    <script src="js/effects.js?v=3"></script>
+    <script src="js/game.js?v=3"></script>
 </body>
 </html>
