@@ -1101,3 +1101,100 @@ html, body {
         animation: none !important;
     }
 }
+
+/* ============================================
+   v7 - Anthropomorphic reaction details
+   ============================================ */
+
+/* Silly speech bubble (premium cream card, warm-ink edge) */
+.speech-bubble {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background: linear-gradient(180deg, #faf3e2 0%, #f0e5cd 100%);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 14px;
+    border: 2px solid var(--ink);
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    z-index: 12;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.6);
+    animation: bubblePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 7px solid transparent;
+    border-top-color: var(--ink);
+    margin-top: 1px;
+}
+.speech-bubble::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #f0e5cd;
+    z-index: 1;
+}
+.speech-bubble.bubble-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.85);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+@keyframes bubblePop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(8px); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+}
+
+/* Plants lean toward the cursor (set via --lean custom property) */
+.plant-sing-wrapper {
+    transform: rotate(var(--lean, 0deg));
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sleeping: sway paused, colors dim, mouth barely open */
+.plot.plant-sleeping .plant-sway-wrapper { animation-play-state: paused; }
+.plot.plant-sleeping .plant-svg {
+    filter: saturate(0.62) brightness(0.8)
+        drop-shadow(0 6px 10px rgba(0,0,0,0.45));
+}
+.plot.plant-sleeping .plant-mouth { transform: scaleY(0.06); }
+.plot.plant-sleeping { cursor: pointer; }
+
+/* Dizzy: rapid wobble (overrides lean briefly) */
+.plot.plant-dizzy .plant-sing-wrapper {
+    animation: dizzyWobble 0.45s ease-in-out infinite;
+    transition: none;
+}
+@keyframes dizzyWobble {
+    0%, 100% { transform: rotate(-9deg) scale(0.95); }
+    25% { transform: rotate(4deg) scale(1.03); }
+    50% { transform: rotate(9deg) scale(1.05); }
+    75% { transform: rotate(-4deg) scale(0.97); }
+}
+.plot.plant-dizzy .plant-svg {
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.45))
+        hue-rotate(18deg) saturate(1.25);
+}
+
+/* Tickle: fast tiny shake (overrides lean briefly) */
+.plot.plant-tickle .plant-sing-wrapper {
+    animation: tickleShake 0.11s linear infinite;
+    transition: none;
+}
+@keyframes tickleShake {
+    0%, 100% { transform: translateX(-3px) rotate(-3.5deg); }
+    50% { transform: translateX(3px) rotate(3.5deg); }
+}
