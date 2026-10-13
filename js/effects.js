@@ -44,9 +44,9 @@ class EffectsCanvas {
     }
 
     /* Spawn floating music notes with glow */
-    spawnNote(element, color) {
+    spawnNote(element, color, syllable) {
         var r = this._toCanvasRect(element);
-        var count = 4;
+        var count = syllable ? 2 : 4;
         for (var i = 0; i < count; i++) {
             this.particles.push({
                 type: 'note',
@@ -59,6 +59,7 @@ class EffectsCanvas {
                 size: 22 + Math.random() * 12,
                 color: color,
                 symbol: this.noteSymbols[Math.floor(Math.random() * this.noteSymbols.length)],
+                syllable: syllable || null,
                 rotation: (Math.random() - 0.5) * 0.6,
                 rotSpeed: (Math.random() - 0.5) * 0.04,
                 wobble: Math.random() * Math.PI * 2,
@@ -240,18 +241,45 @@ class EffectsCanvas {
         if (p.type === 'note') {
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rotation);
-            ctx.fillStyle = p.color;
-            ctx.font = 'bold ' + p.size + 'px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 12;
-            ctx.fillText(p.symbol, 0, 0);
-            /* Add a soft white halo */
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = '#fff';
-            ctx.globalAlpha = Math.max(0, Math.min(1, p.life)) * 0.4;
-            ctx.fillText(p.symbol, 0, 0);
+            if (p.syllable) {
+                /* Singing word critter: syllable + googly eyes */
+                ctx.fillStyle = '#1a1a2e';
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 14;
+                ctx.font = '800 ' + Math.round(p.size * 0.72) + 'px Nunito, sans-serif';
+                ctx.fillText(p.syllable, 0, 0);
+                ctx.shadowColor = '#fff';
+                ctx.shadowBlur = 3;
+                ctx.globalAlpha = Math.max(0, Math.min(1, p.life)) * 0.5;
+                ctx.fillStyle = '#fff';
+                ctx.fillText(p.syllable, 0, 0);
+                ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+                var er = p.size * 0.14;
+                for (var e = -1; e <= 1; e += 2) {
+                    ctx.shadowBlur = 2;
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(e * p.size * 0.2, -p.size * 0.46, er, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#1a1a2e';
+                    ctx.beginPath();
+                    ctx.arc(e * p.size * 0.2 + Math.sin(p.wobble) * er * 0.4, -p.size * 0.46 + er * 0.3, er * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                ctx.fillStyle = p.color;
+                ctx.font = 'bold ' + p.size + 'px serif';
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 12;
+                ctx.fillText(p.symbol, 0, 0);
+                /* Add a soft white halo */
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = '#fff';
+                ctx.globalAlpha = Math.max(0, Math.min(1, p.life)) * 0.4;
+                ctx.fillText(p.symbol, 0, 0);
+            }
         } else if (p.type === 'water') {
             /* Outer drop */
             ctx.fillStyle = p.color;
