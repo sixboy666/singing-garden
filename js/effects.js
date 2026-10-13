@@ -207,6 +207,62 @@ class EffectsCanvas {
         }
     }
 
+    /* Spawn sleepy "Z" letters drifting up (snoozing plant) */
+    spawnZzz(element) {
+        var r = this._toCanvasRect(element);
+        this.particles.push({
+            type: 'zzz',
+            x: r.x + r.w * 0.28,
+            y: r.y + r.h * 0.15,
+            vx: 0.25 + Math.random() * 0.2,
+            vy: -0.45 - Math.random() * 0.25,
+            life: 1.0,
+            decay: 0.007,
+            size: 13 + Math.random() * 7,
+            rotation: 0.15,
+            wobble: Math.random() * Math.PI * 2
+        });
+    }
+
+    /* Spawn hiccup bubbles (overwatered plant) */
+    spawnBubbles(element) {
+        var r = this._toCanvasRect(element);
+        for (var i = 0; i < 6; i++) {
+            this.particles.push({
+                type: 'bubble',
+                x: r.x + (Math.random() - 0.5) * r.w * 0.5,
+                y: r.y + r.h * 0.3 + Math.random() * 10,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: -0.7 - Math.random() * 0.7,
+                life: 1.0,
+                decay: 0.011 + Math.random() * 0.008,
+                size: 3.5 + Math.random() * 5,
+                wobble: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    /* Spawn dizzy stars orbiting the plant's head */
+    spawnDizzyStars(element) {
+        var r = this._toCanvasRect(element);
+        var cx = r.x;
+        var cy = r.y + r.h * 0.15;
+        for (var i = 0; i < 5; i++) {
+            this.particles.push({
+                type: 'dizzystar',
+                cx: cx, cy: cy,
+                x: cx, y: cy,
+                angle: (i / 5) * Math.PI * 2,
+                orbitSpeed: 0.09 + Math.random() * 0.02,
+                radius: r.w * 0.32,
+                life: 1.0,
+                decay: 0.009,
+                size: 3 + Math.random() * 2,
+                color: ['#d4af37', '#f5ebd7', '#e8c976'][Math.floor(Math.random() * 3)]
+            });
+        }
+    }
+
     update() {
         if (!this.ctx2d) return;
         var w = this.canvas.offsetWidth;
@@ -266,6 +322,19 @@ class EffectsCanvas {
                 p.x += Math.sin(p.wobble) * 0.5;
             } else if (p.type === 'ray') {
                 p.length += (p.maxLength - p.length) * 0.15;
+            } else if (p.type === 'zzz') {
+                p.wobble += 0.05;
+                p.x += p.vx + Math.sin(p.wobble) * 0.35;
+                p.rotation = Math.sin(p.wobble) * 0.22;
+            } else if (p.type === 'bubble') {
+                p.wobble += 0.09;
+                p.x += p.vx + Math.sin(p.wobble) * 0.45;
+                p.vy *= 0.995;
+                p.size *= 1.004;
+            } else if (p.type === 'dizzystar') {
+                p.angle += p.orbitSpeed;
+                p.x = p.cx + Math.cos(p.angle) * p.radius;
+                p.y = p.cy + Math.sin(p.angle) * p.radius * 0.32;
             }
 
             p.life -= p.decay;
@@ -491,6 +560,59 @@ class EffectsCanvas {
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(p.length, 0);
+            ctx.stroke();
+        } else if (p.type === 'zzz') {
+            /* Sleepy "Z" — dusty blue with warm-ink outline */
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.font = '700 ' + p.size + 'px Fredoka, Nunito, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#1a1208';
+            ctx.strokeText('Z', 0, 0);
+            ctx.fillStyle = '#88c0d0';
+            ctx.shadowColor = '#5a9ba8';
+            ctx.shadowBlur = 6;
+            ctx.fillText('Z', 0, 0);
+        } else if (p.type === 'bubble') {
+            /* Hiccup bubble — teal outline with shine */
+            ctx.strokeStyle = 'rgba(136,192,208,0.9)';
+            ctx.lineWidth = 1.6;
+            ctx.fillStyle = 'rgba(90,155,168,0.14)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            /* Shine arc */
+            ctx.strokeStyle = 'rgba(245,235,215,0.85)';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.6, -2.4, -1.1);
+            ctx.stroke();
+        } else if (p.type === 'dizzystar') {
+            /* 4-point dizzy star with glow */
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle * 2);
+            var ds = p.size;
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(0, -ds * 1.8);
+            ctx.lineTo(ds * 0.5, -ds * 0.5);
+            ctx.lineTo(ds * 1.8, 0);
+            ctx.lineTo(ds * 0.5, ds * 0.5);
+            ctx.lineTo(0, ds * 1.8);
+            ctx.lineTo(-ds * 0.5, ds * 0.5);
+            ctx.lineTo(-ds * 1.8, 0);
+            ctx.lineTo(-ds * 0.5, -ds * 0.5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#1a1208';
+            ctx.lineWidth = 0.8;
             ctx.stroke();
         }
 
