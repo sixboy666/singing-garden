@@ -74,33 +74,9 @@ class Game {
         setTimeout(function() { self.effects.resize(); }, 150);
     }
 
-    /* Play a C major arpeggio as a welcome sound */
+    /* A friendly little "Mm-hmm-mmm~" hum to open the garden */
     playWelcomeSound() {
-        var self = this;
-        var config = {
-            waveform: 'triangle',
-            envelope: { attack: 0.05, decay: 0.15, sustain: 0.5, release: 0.5 },
-            noteDuration: 0.3,
-            filterFreq: 4500,
-            filterQ: 1.5,
-            reverb: 0.4,
-            delay: 0.2,
-            volume: 0.18,
-            harmonics: [1, 0.5, 0.25],
-            notes: [261.63, 329.63, 392.00, 523.25, 659.25],
-            waterEffects: [
-                { pitchMultiplier: 1, vibrato: 0, reverbBoost: 0, harmonicBoost: 0, delayBoost: 0 },
-                { pitchMultiplier: 1, vibrato: 1, reverbBoost: 0.15, harmonicBoost: 1, delayBoost: 0.1 },
-                { pitchMultiplier: 1, vibrato: 2, reverbBoost: 0.3, harmonicBoost: 2, delayBoost: 0.2 },
-                { pitchMultiplier: 1, vibrato: 3, reverbBoost: 0.45, harmonicBoost: 3, delayBoost: 0.3 }
-            ]
-        };
-        /* Ascending C major arpeggio with sparkle */
-        this.audio.playArpeggio(config, 0, [261.63, 329.63, 392.00, 523.25, 659.25]);
-        /* Then a resolving chord */
-        setTimeout(function() {
-            self.audio.playChord(config, 1, [261.63, 329.63, 392.00]);
-        }, 700);
+        this.audio.singPhrase('hum', [261.63, 329.63, 392.00, 523.25], 1, { stepMs: 190 });
     }
 
     /* ---- Plot creation (8 plots in 4x2 grid) ---- */
@@ -167,6 +143,10 @@ class Game {
             self.clearGarden();
         });
 
+        document.getElementById('chaos-btn').addEventListener('click', function() {
+            self.chaosChoir();
+        });
+
         document.getElementById('mute-btn').addEventListener('click', function() {
             self.toggleMute();
         });
@@ -220,6 +200,9 @@ class Game {
                     break;
                 case 'm': case 'M':
                     self.toggleMute();
+                    break;
+                case 'x': case 'X':
+                    self.chaosChoir();
                     break;
                 case 'h': case 'H':
                     self.showHelp();
@@ -280,8 +263,8 @@ class Game {
             container.classList.remove('plant-growing');
         }, 600);
 
-        /* Play a chord on planting for a warm welcome */
-        this.audio.playChord(plant.audio, 0);
+        /* Curious little "hm?" when planted */
+        this.audio.playVoice(plant.id, plant.audio.notes[0], 0, 150);
         this.effects.spawnSparkles(plot.element);
         this.effects.spawnPetals(plot.element, plant.colors.primary);
         this.updateUI();
@@ -296,15 +279,8 @@ class Game {
 
         var self = this;
 
-        /* Catchy arpeggio: notes play in sequence with built-in delay + reverb */
-        this.audio.playArpeggio(plant.audio, plot.waterLevel);
-
-        /* Layer a chord on top for harmonic richness when well-watered */
-        if (plot.waterLevel >= 2) {
-            setTimeout(function() {
-                self.audio.playChord(plant.audio, plot.waterLevel);
-            }, 80);
-        }
+        /* Humanoid voice: sing a silly syllable phrase */
+        var phrase = this.audio.singPhrase(plant.id, plant.audio.notes, plot.waterLevel);
 
         /* Restart singing animation with plant's unique animClass */
         var container = plot.element.querySelector('.plant-container');
@@ -320,19 +296,23 @@ class Game {
             plot.element.classList.remove('plot-singing');
         }, 600);
 
-        /* Spawn floating notes + occasional petals/hearts for visual delight */
-        plant.audio.notes.forEach(function(note, i) {
+        /* Spawn singing word critters synced to the voice */
+        phrase.forEach(function(syll) {
             setTimeout(function() {
-                self.effects.spawnNote(plot.element, plant.colors.primary);
-                if (i === 0 && Math.random() < 0.4) {
-                    self.effects.spawnPetals(plot.element, plant.colors.secondary);
-                }
-                if (i === plant.audio.notes.length - 1 && plot.waterLevel >= 2 && Math.random() < 0.5) {
+                self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
+            }, syll.t);
+        });
+        if (plot.waterLevel >= 2) {
+            setTimeout(function() {
+                self.effects.spawnNote(plot.element, plant.colors.secondary, phrase.length ? phrase[0].text : 'La');
+            }, 60);
+            if (Math.random() < 0.5) {
+                setTimeout(function() {
                     self.effects.spawnHearts(plot.element);
                     self.effects.spawnLightRays(plot.element);
-                }
-            }, i * 110);
-        });
+                }, 320);
+            }
+        }
     }
 
     /* ---- Water a plant ---- */
@@ -352,7 +332,9 @@ class Game {
         }, 600);
 
         this.effects.spawnWaterDrops(plot.element);
-        this.audio.playNote(plant.audio, plot.waterLevel);
+        /* Happy rising "glug-ah!" */
+        this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
+        this.audio.playVoice(plant.id, plant.audio.notes[0] * 1.33, plot.waterLevel, 150);
 
         var labels = ['Dry', 'Watered', 'Well-watered', 'Lush!'];
         this.showToast(plant.name + ': ' + labels[plot.waterLevel]);
@@ -405,6 +387,35 @@ class Game {
             setTimeout(playNext, 750);
         }
         playNext();
+    }
+
+    /* ---- CHAOS CHOIR: every plant sings at once, absurdly ---- */
+    chaosChoir() {
+        var planted = [];
+        for (var i = 0; i < this.plots.length; i++) {
+            if (this.plots[i].planted) planted.push(i);
+        }
+        if (planted.length === 0) {
+            this.showToast('Plant some flowers first!');
+            return;
+        }
+        var transposes = [-12, -5, 0, 7, 12];
+        var self = this;
+        planted.forEach(function(idx, n) {
+            var plot = self.plots[idx];
+            var plant = getPlantById(plot.plantType);
+            if (!plant) return;
+            var tr = transposes[Math.floor(Math.random() * transposes.length)];
+            var wl = Math.max(plot.waterLevel, 2);
+            var phrase = self.audio.singPhrase(plant.id, plant.audio.notes, wl, { transpose: tr });
+            phrase.forEach(function(syll) {
+                setTimeout(function() {
+                    self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
+                    if (Math.random() < 0.35) self.effects.spawnSparkles(plot.element);
+                }, syll.t + n * 120);
+            });
+        });
+        this.showToast('TOTAL GARDEN CHAOS!');
     }
 
     /* ---- Clear all plants ---- */
