@@ -477,6 +477,186 @@ class AudioEngine {
         return out;
     }
 
+    /* ============================================
+       HUMANOID REACTION SFX - absurd little noises
+       Giggles, yawns, hiccups, burps, snores,
+       splats, boings and raspberries. All synth.
+       ============================================ */
+
+    /* Giggle: "hee-hee-hee" quick rising vocal blips */
+    playGiggle(freq) {
+        if (!this.initialized || this.muted) return;
+        var f = freq || 520;
+        for (var i = 0; i < 3; i++) {
+            this.playVoice('pip', f * (1 + i * 0.14), 0, i * 105,
+                { dur: 0.09, noStutter: true, volume: 0.85 });
+        }
+    }
+
+    /* Yawn: long descending "haaaww... mmm" */
+    playYawn() {
+        if (!this.initialized || this.muted) return;
+        this.playVoice('lumi', 200, 0, 0, { slideFrom: 430, dur: 0.75, volume: 0.9 });
+        this.playVoice('hum', 105, 0, 620, { dur: 0.55, volume: 0.7 });
+    }
+
+    /* Hiccup: tiny squeaky "hic!" */
+    playHiccup() {
+        if (!this.initialized || this.muted) return;
+        this.playVoice('pip', 640, 0, 0, { dur: 0.055, noStutter: true, transpose: 5, volume: 0.9 });
+    }
+
+    /* Snore: inhale hiss + low rumbling exhale (one cycle) */
+    playSnore() {
+        if (!this.initialized || this.muted) return;
+        var now = this.ctx.currentTime;
+        /* Inhale: bandpassed noise rising */
+        var noise = this.ctx.createBufferSource();
+        noise.buffer = this._noiseBuffer();
+        var nf = this.ctx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.setValueAtTime(500, now);
+        nf.frequency.exponentialRampToValueAtTime(1300, now + 0.5);
+        nf.Q.value = 2;
+        var ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(0, now);
+        ng.gain.linearRampToValueAtTime(0.05, now + 0.28);
+        ng.gain.linearRampToValueAtTime(0, now + 0.55);
+        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
+        noise.start(now); noise.stop(now + 0.6);
+        /* Exhale: low saw rumble with wobble */
+        var osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(62, now + 0.55);
+        osc.frequency.exponentialRampToValueAtTime(46, now + 1.15);
+        var lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 220;
+        var am = this.ctx.createOscillator();
+        am.frequency.value = 14;
+        var amg = this.ctx.createGain(); amg.gain.value = 0.035;
+        var og = this.ctx.createGain();
+        og.gain.setValueAtTime(0, now + 0.55);
+        og.gain.linearRampToValueAtTime(0.09, now + 0.7);
+        og.gain.linearRampToValueAtTime(0, now + 1.2);
+        am.connect(amg); amg.connect(og.gain);
+        osc.connect(lp); lp.connect(og); og.connect(this.compressor);
+        var rs = this.ctx.createGain(); rs.gain.value = 0.3;
+        og.connect(rs); rs.connect(this.reverbNode);
+        osc.start(now + 0.55); osc.stop(now + 1.25);
+        am.start(now + 0.55); am.stop(now + 1.25);
+    }
+
+    /* Burp: low square with AM flutter + gurgle noise */
+    playBurp() {
+        if (!this.initialized || this.muted) return;
+        var now = this.ctx.currentTime;
+        var osc = this.ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(95, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.26);
+        var am = this.ctx.createOscillator();
+        am.type = 'square'; am.frequency.value = 27;
+        var amg = this.ctx.createGain(); amg.gain.value = 0.5;
+        var g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.16, now + 0.03);
+        g.gain.setValueAtTime(0.16, now + 0.18);
+        g.gain.linearRampToValueAtTime(0, now + 0.3);
+        am.connect(amg); amg.connect(g.gain);
+        var lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 500;
+        osc.connect(lp); lp.connect(g); g.connect(this.compressor);
+        var rs = this.ctx.createGain(); rs.gain.value = 0.35;
+        g.connect(rs); rs.connect(this.reverbNode);
+        osc.start(now); osc.stop(now + 0.32);
+        am.start(now); am.stop(now + 0.32);
+    }
+
+    /* Splat: wet plop (noise thump + pitch drop) */
+    playSplat() {
+        if (!this.initialized || this.muted) return;
+        var now = this.ctx.currentTime;
+        var noise = this.ctx.createBufferSource();
+        noise.buffer = this._noiseBuffer();
+        var nf = this.ctx.createBiquadFilter();
+        nf.type = 'lowpass';
+        nf.frequency.setValueAtTime(900, now);
+        nf.frequency.exponentialRampToValueAtTime(140, now + 0.16);
+        var ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(0.22, now);
+        ng.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
+        noise.start(now); noise.stop(now + 0.2);
+        var osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(48, now + 0.15);
+        var og = this.ctx.createGain();
+        og.gain.setValueAtTime(0.18, now);
+        og.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(og); og.connect(this.compressor);
+        osc.start(now); osc.stop(now + 0.18);
+    }
+
+    /* Boing: springy pitch-wobbled sine */
+    playBoing() {
+        if (!this.initialized || this.muted) return;
+        var now = this.ctx.currentTime;
+        var osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.4);
+        var lfo = this.ctx.createOscillator();
+        lfo.frequency.value = 11;
+        var lg = this.ctx.createGain();
+        lg.gain.setValueAtTime(60, now);
+        lg.gain.exponentialRampToValueAtTime(0.5, now + 0.45);
+        lfo.connect(lg); lg.connect(osc.frequency);
+        var g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.14, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(g); g.connect(this.compressor);
+        var ds = this.ctx.createGain(); ds.gain.value = 0.25;
+        g.connect(ds); ds.connect(this.delayNode);
+        osc.start(now); osc.stop(now + 0.52);
+        lfo.start(now); lfo.stop(now + 0.52);
+    }
+
+    /* Raspberry: "pbtbtbt" flutter-tongue Bronx cheer */
+    playRaspberry() {
+        if (!this.initialized || this.muted) return;
+        var now = this.ctx.currentTime;
+        var osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(90, now + 0.34);
+        var am = this.ctx.createOscillator();
+        am.type = 'square'; am.frequency.value = 34;
+        var amg = this.ctx.createGain(); amg.gain.value = 0.5;
+        var lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 2;
+        var g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.13, now + 0.03);
+        g.gain.setValueAtTime(0.13, now + 0.26);
+        g.gain.linearRampToValueAtTime(0, now + 0.38);
+        am.connect(amg); amg.connect(g.gain);
+        osc.connect(lp); lp.connect(g); g.connect(this.compressor);
+        /* breathy spit noise */
+        var noise = this.ctx.createBufferSource();
+        noise.buffer = this._noiseBuffer();
+        var nf = this.ctx.createBiquadFilter();
+        nf.type = 'bandpass'; nf.frequency.value = 1100; nf.Q.value = 0.6;
+        var ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(0.05, now);
+        ng.gain.linearRampToValueAtTime(0, now + 0.35);
+        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
+        osc.start(now); osc.stop(now + 0.4);
+        am.start(now); am.stop(now + 0.4);
+        noise.start(now); noise.stop(now + 0.4);
+    }
+
     setMuted(muted) {
         this.muted = muted;
         if (this.masterGain) {
