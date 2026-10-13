@@ -26,7 +26,7 @@ var SILLY_LINES = {
     ],
     wake: [
         'Five more minutes...', "I wasn't sleeping! I swear!",
-        'Wha— who's there?!', 'Morning already?',
+        "Wha— who's there?!", 'Morning already?',
         '*yawn* ...I was dreaming of applause.'
     ],
     dizzy: [
