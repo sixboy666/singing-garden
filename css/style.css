@@ -454,6 +454,42 @@ html, body {
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 }
 
+/* ==== Singing mouth (opens while vocalizing) ==== */
+.plant-mouth {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scaleY(0.18);
+    transition: transform 0.12s ease;
+}
+.plant-tongue {
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+.plant-container.plant-singing .plant-mouth,
+.plot-singing .plant-mouth {
+    animation: mouthSing 0.28s ease-in-out infinite alternate;
+}
+.plant-container.plant-singing .plant-tongue,
+.plot-singing .plant-tongue {
+    opacity: 1;
+}
+@keyframes mouthSing {
+    from { transform: scaleY(0.35) scaleX(0.85); }
+    to { transform: scaleY(1.05) scaleX(1.08); }
+}
+
+/* Drago snaps its jaw while singing */
+.plant-container.plant-singing .drago-mouth,
+.plot-singing .drago-mouth {
+    transform-box: fill-box;
+    transform-origin: center top;
+    animation: jawChomp 0.22s ease-in-out infinite alternate;
+}
+@keyframes jawChomp {
+    from { transform: scaleY(1); }
+    to { transform: scaleY(1.22) translateY(5%); }
+}
+
 /* Wrappers for layered motion */
 .plant-sway-wrapper {
     animation: plantSway 5s ease-in-out infinite;
@@ -755,6 +791,15 @@ html, body {
 }
 .action-btn.clear-btn {
     background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(200,80,80,0.1));
+}
+
+.action-btn.chaos-btn {
+    background: linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,61,220,0.14));
+    animation: chaosPulse 1.6s ease-in-out infinite;
+}
+@keyframes chaosPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,61,220,0.4); }
+    50% { box-shadow: 0 0 14px 4px rgba(255,61,220,0.35); }
 }
 
 /* ==== Modal ==== */
