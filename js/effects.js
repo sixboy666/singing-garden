@@ -9,17 +9,44 @@ class EffectsCanvas {
         this.canvas = null;
         this.ctx2d = null;
         this.particles = [];
+        this.ambient = [];
         this.noteSymbols = ['\u266A', '\u266B', '\u2669', '\u266C'];
         this.dpr = 1;
+        this._ambientSpawnTimer = 0;
     }
 
     init(canvas) {
         this.canvas = canvas;
         this.ctx2d = canvas.getContext('2d');
         this.resize();
+        this._seedAmbient();
         var self = this;
-        window.addEventListener('resize', function() { self.resize(); });
-        window.addEventListener('orientationchange', function() { self.resize(); });
+        window.addEventListener('resize', function() { self.resize(); self._seedAmbient(); });
+        window.addEventListener('orientationchange', function() { self.resize(); self._seedAmbient(); });
+    }
+
+    _seedAmbient() {
+        this.ambient = [];
+        var w = this.canvas ? this.canvas.offsetWidth : window.innerWidth;
+        var h = this.canvas ? this.canvas.offsetHeight : window.innerHeight;
+        var count = Math.min(24, Math.floor(w * h / 30000));
+        for (var i = 0; i < count; i++) {
+            this.ambient.push(this._makeAmbient(w, h, true));
+        }
+    }
+
+    _makeAmbient(w, h, randomY) {
+        return {
+            x: Math.random() * w,
+            y: randomY ? Math.random() * h : h + 10,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: -0.15 - Math.random() * 0.25,
+            size: 1.5 + Math.random() * 2.5,
+            color: ['#FFD700', '#FF6BD8', '#4FD8E8', '#FFFFFF', '#7AD06A'][Math.floor(Math.random() * 5)],
+            wobble: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.02 + Math.random() * 0.02,
+            opacity: 0.3 + Math.random() * 0.35
+        };
     }
 
     resize() {
@@ -186,6 +213,24 @@ class EffectsCanvas {
         var h = this.canvas.offsetHeight;
         this.ctx2d.clearRect(0, 0, w, h);
 
+        /* Update + draw ambient floating pollen/spores */
+        if (this.ambient.length > 0) {
+            for (var a = 0; a < this.ambient.length; a++) {
+                var ap = this.ambient[a];
+                ap.x += ap.vx + Math.sin(ap.wobble) * 0.3;
+                ap.y += ap.vy;
+                ap.wobble += ap.wobbleSpeed;
+                /* Wrap around */
+                if (ap.y < -10) {
+                    ap.y = h + 10;
+                    ap.x = Math.random() * w;
+                }
+                if (ap.x < -10) ap.x = w + 10;
+                if (ap.x > w + 10) ap.x = -10;
+                this._drawAmbient(ap);
+            }
+        }
+
         var surviving = [];
         for (var i = 0; i < this.particles.length; i++) {
             var p = this.particles[i];
@@ -231,6 +276,29 @@ class EffectsCanvas {
             }
         }
         this.particles = surviving;
+    }
+
+    _drawAmbient(p) {
+        var ctx = this.ctx2d;
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        /* Tiny sparkle cross */
+        ctx.shadowBlur = 3;
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.size * 1.5, p.y);
+        ctx.lineTo(p.x + p.size * 1.5, p.y);
+        ctx.moveTo(p.x, p.y - p.size * 1.5);
+        ctx.lineTo(p.x, p.y + p.size * 1.5);
+        ctx.stroke();
+        ctx.restore();
     }
 
     _draw(p) {
@@ -439,5 +507,6 @@ class EffectsCanvas {
 
     clear() {
         this.particles = [];
+        /* Ambient particles persist - only re-seed on resize */
     }
 }
