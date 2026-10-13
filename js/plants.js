@@ -55,7 +55,9 @@ function _face(cx, cy, eyeR, smileW, smileH, eyeColor) {
         '<circle cx="' + (cx + smileW / 2 + 0.6) + '" cy="' + (cy - 0.6) + '" r="' + (eyeR * 0.4).toFixed(1) + '" fill="#fff" opacity="0.8"/>' +
         '<path d="M' + (cx - smileW / 2) + ' ' + (cy + smileH) +
         ' Q' + cx + ' ' + (cy + smileH * 2.2) + ' ' + (cx + smileW / 2) + ' ' + (cy + smileH) +
-        '" stroke="' + ec + '" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+        '" stroke="' + ec + '" stroke-width="1.4" fill="none" stroke-linecap="round"/>' +
+        '<ellipse class="plant-mouth" cx="' + cx + '" cy="' + (cy + smileH * 2.3).toFixed(1) + '" rx="' + (smileW * 0.34).toFixed(1) + '" ry="2.4" fill="#6b1f2e" stroke="#40101c" stroke-width="0.5"/>' +
+        '<ellipse class="plant-tongue" cx="' + (cx + smileW * 0.08).toFixed(1) + '" cy="' + (cy + smileH * 2.6).toFixed(1) + '" rx="' + (smileW * 0.15).toFixed(1) + '" ry="0.9" fill="#e36a7a"/>';
 }
 
 function _sparkles(positions) {
@@ -204,7 +206,9 @@ function renderFernella(wl) {
         fronds += '</g>';
     }
     return '<svg viewBox="0 0 100 120" class="plant-svg" xmlns="http://www.w3.org/2000/svg"><defs>' + defs + '</defs>' +
-        glow + '<path d="M48 120 L52 120 L52 110 L48 110 Z" fill="#6B4423"/>' + fronds + '</svg>';
+        glow + '<path d="M48 120 L52 120 L52 110 L48 110 Z" fill="#6B4423"/>' + fronds +
+        _face(50, 104, 1.6, 8, 3) +
+        '</svg>';
 }
 
 /* 6. Lumi - Glowing mushroom with bioluminescent cap */
@@ -245,6 +249,7 @@ function renderCrysto(wl) {
         '</g>' +
         extraShard +
         _sparkles([[45,50,1.5],[55,68,1.5],[50,75,1.2]]) +
+        _face(50, 62, 1.6, 8, 2.5) +
         '</svg>';
 }
 
@@ -270,6 +275,7 @@ function renderPip(wl) {
         '<g class="pip-bounce-3">' + pod(50, 65, 1.3, 0) + '</g>' +
         (wl >= 2 ? '<g class="pip-bounce-4">' + pod(45, 50, 0.9, -15) + '</g>' +
         '<g class="pip-bounce-5">' + pod(55, 50, 0.9, 15) + '</g>' : '') +
+        _face(50, 47, 1.8, 9, 3) +
         '</svg>';
 }
 
@@ -293,6 +299,7 @@ function renderBublo(wl) {
         (wl >= 2 ? '<g class="bub-float-4">' + bubble(50, 50, 7) + '</g>' +
         '<g class="bub-float-5">' + bubble(40, 60, 4) + '</g>' +
         '<g class="bub-float-6">' + bubble(60, 60, 4) + '</g>' : '') +
+        _face(50, 104, 2, 10, 3.5) +
         '</svg>';
 }
 
@@ -316,6 +323,7 @@ function renderDrago(wl) {
         tongue +
         '</g>' +
         _sparkles([[28,55,1],[72,55,1],[50,42,1.5]]) +
+        _face(50, 39, 2, 9, 2) +
         '</svg>';
 }
 
@@ -343,6 +351,7 @@ function renderFlama(wl) {
         (wl >= 2 ? flame(50, 75, 45, 12) : '') +
         '</g>' +
         _sparkles([[48,40,1.5],[52,40,1.5],[50,30,2]]) +
+        _face(50, 66, 1.8, 9, 3) +
         '</svg>';
 }
 
@@ -378,6 +387,7 @@ function renderShimmer(wl) {
         tilePattern +
         '</g>' +
         _sparkles([[28,40,1.5],[72,42,1.5],[28,68,1.2],[72,66,1.2]]) +
+        _face(50, 57, 2, 10, 3) +
         '</svg>';
 }
 
@@ -436,6 +446,7 @@ function renderVinio(wl) {
         '<g class="vinio-drop-1">' + cluster(30, 55, 5) + '</g>' +
         '<g class="vinio-drop-2">' + cluster(70, 55, 5) + '</g>' +
         (wl >= 2 ? '<g class="vinio-drop-3">' + cluster(50, 50, 6) + '</g>' : '') +
+        _face(50, 100, 2, 10, 3.5) +
         '</svg>';
 }
 
@@ -463,6 +474,7 @@ function renderEcho(wl) {
         '<circle cx="50" cy="55" r="3" fill="#FF6000"/>' +
         '</g>' +
         _sparkles([[28,40,1.5],[72,40,1.5],[50,30,2]]) +
+        _face(50, 56, 1.5, 7, 2.5) +
         '</svg>';
 }
 
@@ -495,6 +507,7 @@ function renderTwinkle(wl) {
         star(30, 35, 5, 0) + star(70, 35, 5, 30) + star(70, 75, 5, 60) + star(30, 75, 5, 90) +
         '</g>' : '') +
         _sparkles([[28,40,1.2],[72,40,1.2],[28,70,1.2],[72,70,1.2]]) +
+        _face(50, 57, 1.4, 6, 2) +
         '</svg>';
 }
 
