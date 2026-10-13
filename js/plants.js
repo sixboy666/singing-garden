@@ -49,7 +49,8 @@ function _petals(count, cx, cy, rx, ry, radius, fill, opacity, rotation) {
 }
 
 /* New School tattoo-style face: BIG expressive eyes with pupils + catchlights,
-   bold eyebrows, wide grinning mouth with white teeth, thick black outlines. */
+   bold eyebrows, wide grinning mouth with white teeth, thick black outlines,
+   rosy cheek blushes for extra charm. */
 function _face(cx, cy, eyeR, smileW, smileH, eyeColor) {
     var ec = eyeColor || '#0a0a0a';
     var ex = smileW / 2;
@@ -59,19 +60,29 @@ function _face(cx, cy, eyeR, smileW, smileH, eyeColor) {
     var mouthW = smileW * 0.85;
     var toothW = mouthW / 4.5;
 
+    /* Rosy cheek blushes (semi-transparent pink) */
+    var cheeks = '<ellipse cx="' + (cx - ex - eyeR * 0.8).toFixed(1) + '" cy="' + (cy + eyeR * 0.8).toFixed(1) +
+        '" rx="' + (eyeR * 0.9).toFixed(1) + '" ry="' + (eyeR * 0.6).toFixed(1) +
+        '" fill="#FF8FA8" opacity="0.5"/>' +
+        '<ellipse cx="' + (cx + ex + eyeR * 0.8).toFixed(1) + '" cy="' + (cy + eyeR * 0.8).toFixed(1) +
+        '" rx="' + (eyeR * 0.9).toFixed(1) + '" ry="' + (eyeR * 0.6).toFixed(1) +
+        '" fill="#FF8FA8" opacity="0.5"/>';
+
     /* Eyebrows (angled = manic energy) */
     var brow = '<path d="M' + (cx - ex - eyeR) + ' ' + (cy - eyeR - 1.5) +
         ' L' + (cx - ex + eyeR) + ' ' + (cy - eyeR - 0.3) + '" stroke="' + ec + '" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
         '<path d="M' + (cx + ex - eyeR) + ' ' + (cy - eyeR - 0.3) +
         ' L' + (cx + ex + eyeR) + ' ' + (cy - eyeR - 1.5) + '" stroke="' + ec + '" stroke-width="2.2" stroke-linecap="round" fill="none"/>';
 
-    /* Eyes: white sclera + black pupil + white catchlight */
+    /* Eyes: white sclera + black pupil + white catchlight + extra sparkle */
     var eyes = '<circle cx="' + (cx - ex) + '" cy="' + cy + '" r="' + eyeR + '" fill="#fff" stroke="' + ec + '" stroke-width="2"/>' +
         '<circle cx="' + (cx + ex) + '" cy="' + cy + '" r="' + eyeR + '" fill="#fff" stroke="' + ec + '" stroke-width="2"/>' +
         '<circle cx="' + (cx - ex + 0.4) + '" cy="' + cy + '" r="' + pupR + '" fill="' + ec + '"/>' +
         '<circle cx="' + (cx + ex + 0.4) + '" cy="' + cy + '" r="' + pupR + '" fill="' + ec + '"/>' +
         '<circle cx="' + (cx - ex + 0.8) + '" cy="' + (cy - 0.5) + '" r="' + catchR + '" fill="#fff"/>' +
-        '<circle cx="' + (cx + ex + 0.8) + '" cy="' + (cy - 0.5) + '" r="' + catchR + '" fill="#fff"/>';
+        '<circle cx="' + (cx + ex + 0.8) + '" cy="' + (cy - 0.5) + '" r="' + catchR + '" fill="#fff"/>' +
+        '<circle cx="' + (cx - ex - 0.6) + '" cy="' + (cy + eyeR * 0.4) + '" r="' + (eyeR * 0.1).toFixed(1) + '" fill="#fff" opacity="0.8"/>' +
+        '<circle cx="' + (cx + ex - 0.6) + '" cy="' + (cy + eyeR * 0.4) + '" r="' + (eyeR * 0.1).toFixed(1) + '" fill="#fff" opacity="0.8"/>';
 
     /* Mouth: dark interior + white teeth + bold lip outline */
     var mouth = '<g class="plant-mouth">' +
@@ -92,7 +103,7 @@ function _face(cx, cy, eyeR, smileW, smileH, eyeColor) {
         '" fill="#e8485a" stroke="' + ec + '" stroke-width="0.6"/>';
     mouth += '</g>';
 
-    return brow + eyes + mouth;
+    return cheeks + brow + eyes + mouth;
 }
 
 function _sparkles(positions) {
