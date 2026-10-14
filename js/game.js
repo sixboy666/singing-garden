@@ -161,7 +161,6 @@ class Game {
             self.audio.resume();
             self.showGardenScreen();
             self.audio.playWelcome();
-            if (self.isNight) self.audio.startPad();
         });
     }
 
@@ -1040,10 +1039,8 @@ class Game {
         this.isNight = !this.isNight;
         this.applyDayNight();
         if (this.isNight) {
-            this.audio.startPad();
             this.showToast('Night falls... the garden glows.');
         } else {
-            this.audio.stopPad();
             this.showToast('Morning breaks!');
         }
         this._reactDayNight();
