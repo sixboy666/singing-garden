@@ -1,58 +1,68 @@
-/* ============================================
-   SINGING GARDEN - Game Controller
-   Main game logic: planting, singing, watering, melody
-   8 plots, 12 plant types with unique animations
-   v7: anthropomorphic reactions (sleep, dizzy, tickle,
-   overwater hiccups, silly speech bubbles, cursor lean)
-   ============================================ */
+/* ============================================================
+   SINGING GARDEN v9 — GAME CONTROLLER
+   Aurora Bloom: growth stages, day/night, conduct mode,
+   plant/water modes, melody/harmony/chaos, silly reactions
+   ============================================================ */
 
-/* Absurd one-liners for speech bubbles (context-keyed) */
 var SILLY_LINES = {
     click: [
-        'Again! Again!', 'Do I know you?', 'That tickles!',
-        'I was BORN ready.', 'Encore? Obviously.',
-        'I practice 8 hours a day.', "You're poking a masterpiece.",
-        'Ahem. AHEM. Thanks.'
+        "Again! Again!", "Do I know you?", "That tickles!",
+        "I was BORN ready.", "Encore? Obviously.",
+        "I practice 8 hours a day.", "You are poking a masterpiece.",
+        "Ahem. AHEM. Thanks."
+    ],
+    plant: [
+        "A new bloom!", "Hello, world!", "I have arrived.",
+        "Feed me applause.", "Finally, the spotlight!"
     ],
     water: [
-        'Hydration station!', 'Mmm, vintage rain.',
-        'Right in the roots!', 'Spa day! Spa day!',
-        'Just what the doctor ordered.'
+        "Hydration station!", "Mmm, vintage rain.",
+        "Right in the roots!", "Spa day! Spa day!",
+        "Just what the doctor ordered."
     ],
     overwater: [
-        '*BUUURP* ...pardon.', "I'm full! I'm FULL!",
-        'Blub blub. Help. Blub.', 'Water... everywhere...',
-        'I said SIP, not OCEAN.'
+        "*BUUURP* ...pardon.", "I am full! I am FULL!",
+        "Blub blub. Help. Blub.", "Water... everywhere...",
+        "I said SIP, not OCEAN."
     ],
     wake: [
-        'Five more minutes...', "I wasn't sleeping! I swear!",
-        "Wha— who's there?!", 'Morning already?',
-        '*yawn* ...I was dreaming of applause.'
+        "Five more minutes...", "I was not sleeping! I swear!",
+        "Wha— who is there?!", "Morning already?",
+        "*yawn* ...I was dreaming of applause."
     ],
     dizzy: [
-        'Whoa whoa WHOA...', 'The garden is SPINNING!',
-        'Too! Many! Pokes!', 'I see stars... pretty stars...'
+        "Whoa whoa WHOA...", "The garden is SPINNING!",
+        "Too! Many! Pokes!", "I see stars... pretty stars..."
     ],
     tickle: [
-        'Hee hee hee!', 'Not the LEAVES!', 'Stooop! ...okay continue.',
-        'Eeheeheehee!', 'Ha! HA! Mercy!'
+        "Hee hee hee!", "Not the LEAVES!", "Stooop! ...okay continue.",
+        "Eeheeheehee!", "Ha! HA! Mercy!"
+    ],
+    bloom: [
+        "I BLOOMED!", "Behold my glory!", "Full flower power!",
+        "Now I can REALLY sing."
     ]
 };
 
-var SLEEP_AFTER_MS = 25000;   /* ignored plant dozes off */
-var DIZZY_CLICKS = 4;         /* rapid clicks to make dizzy */
+var SLEEP_AFTER_MS = 28000;
+var DIZZY_CLICKS = 4;
 var DIZZY_WINDOW_MS = 1800;
 var DIZZY_LAST_MS = 2000;
 var TICKLE_COOLDOWN_MS = 1400;
+var STAGE_SEED_MS = 900;
+var STAGE_SPROUT_MS = 1100;
+
+var MODES = { PLANT: 'plant', CONDUCT: 'conduct', WATER: 'water' };
 
 class Game {
     constructor() {
         this.audio = new AudioEngine();
         this.effects = new EffectsCanvas();
         this.plots = [];
+        this.mode = MODES.PLANT;
         this.selectedPlantType = null;
-        this.waterMode = false;
         this.muted = false;
+        this.isNight = true;
         this.isPlayingMelody = false;
         this.melodyStopped = false;
         this._toastTimer = null;
@@ -61,9 +71,11 @@ class Game {
         this._cursorX = -9999;
         this._cursorY = -9999;
         this._pointerDown = false;
+        this._conductPath = [];
+        this._conducting = false;
+        this._lastConductIndex = -1;
     }
 
-    /* ---- Initialization ---- */
     init() {
         this.createToast();
         this.createPlots();
@@ -73,23 +85,19 @@ class Game {
         this.setupKeyboard();
         this.effects.init(document.getElementById('effects-canvas'));
         this.selectedPlantType = PLANT_TYPES[0].id;
+        this.applyDayNight();
         this.updateUI();
         this.startAnimationLoop();
         this._startIdleLoop();
         this._setupLean();
         this._setupTickle();
+        this._setupConduct();
     }
 
-    /* ---- Toast notification ---- */
+    /* ---- Toast ---- */
     createToast() {
         var toast = document.createElement('div');
         toast.id = 'toast';
-        toast.style.cssText =
-            'position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);' +
-            'background:rgba(0,0,0,0.75);color:#fff;padding:12px 28px;border-radius:12px;' +
-            'font-size:0.9rem;z-index:200;pointer-events:none;opacity:0;' +
-            'transition:opacity 0.3s ease;font-family:Nunito,sans-serif;font-weight:700;' +
-            'white-space:nowrap;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
         document.getElementById('game-container').appendChild(toast);
     }
 
@@ -112,7 +120,8 @@ class Game {
             self.audio.init();
             self.audio.resume();
             self.showGardenScreen();
-            self.playWelcomeSound();
+            self.audio.playWelcome();
+            if (self.isNight) self.audio.startPad();
         });
     }
 
@@ -123,12 +132,7 @@ class Game {
         setTimeout(function() { self.effects.resize(); }, 150);
     }
 
-    /* A friendly little "Mm-hmm-mmm~" hum to open the garden */
-    playWelcomeSound() {
-        this.audio.singPhrase('hum', [261.63, 329.63, 392.00, 523.25], 1, { stepMs: 190 });
-    }
-
-    /* ---- Plot creation (8 plots in 4x2 grid) ---- */
+    /* ---- Plots ---- */
     createPlots() {
         var container = document.getElementById('plots-container');
         var self = this;
@@ -156,12 +160,13 @@ class Game {
                 sleeping: false,
                 dizzy: false,
                 clickTimes: [],
-                lastTickle: 0
+                lastTickle: 0,
+                stage: 0
             });
         }
     }
 
-    /* ---- Silly speech bubble above a plot ---- */
+    /* ---- Speech bubble ---- */
     _speak(index, text) {
         var plot = this.plots[index];
         if (!plot) return;
@@ -181,7 +186,7 @@ class Game {
         this._speak(index, lines[Math.floor(Math.random() * lines.length)]);
     }
 
-    /* ---- Wake a sleeping plant (yawn + protest) ---- */
+    /* ---- Wake sleeping plant ---- */
     _wakePlot(index) {
         var plot = this.plots[index];
         plot.sleeping = false;
@@ -190,7 +195,7 @@ class Game {
         this._speakRandom(index, 'wake');
     }
 
-    /* ---- Idle loop: unloved plants doze off and snore ---- */
+    /* ---- Idle sleep loop ---- */
     _startIdleLoop() {
         var self = this;
         this._idleTimer = setInterval(function() {
@@ -205,21 +210,17 @@ class Game {
                     plot.element.classList.add('plant-sleeping');
                 }
                 if (plot.sleeping) {
-                    if (Math.random() < 0.55) {
-                        self.effects.spawnZzz(plot.element);
-                    }
-                    if (Math.random() < 0.12) {
-                        self.audio.playSnore();
-                    }
+                    if (Math.random() < 0.5) self.effects.spawnZzz(plot.element);
+                    if (Math.random() < 0.12) self.audio.playSnore();
                 }
             }
         }, 1400);
     }
 
-    /* ---- Plants lean toward the cursor (they're nosy) ---- */
+    /* ---- Cursor lean ---- */
     _setupLean() {
         var self = this;
-        var garden = document.getElementById('garden-area');
+        var garden = document.getElementById('garden-stage');
         garden.addEventListener('pointermove', function(e) {
             self._cursorX = e.clientX;
             self._cursorY = e.clientY;
@@ -250,7 +251,6 @@ class Game {
             var dx = this._cursorX - (r.left + r.width / 2);
             var dy = this._cursorY - (r.top + r.height / 2);
             var dist = Math.sqrt(dx * dx + dy * dy);
-            /* Lean only when cursor is near-ish; stronger when closer */
             var maxLean = 7;
             var strength = Math.max(0, 1 - dist / 480);
             var deg = Math.max(-maxLean, Math.min(maxLean, (dx / 60) * strength * maxLean));
@@ -258,7 +258,7 @@ class Game {
         }
     }
 
-    /* ---- Tickle: drag across a plant with pointer held ---- */
+    /* ---- Tickle ---- */
     _setupTickle() {
         var self = this;
         document.addEventListener('pointerdown', function() { self._pointerDown = true; });
@@ -267,6 +267,7 @@ class Game {
         var container = document.getElementById('plots-container');
         container.addEventListener('pointerover', function(e) {
             if (!self._pointerDown) return;
+            if (self.mode === MODES.CONDUCT) return;
             var plotEl = e.target.closest('.plot');
             if (!plotEl) return;
             var idx = parseInt(plotEl.dataset.index);
@@ -286,7 +287,81 @@ class Game {
         });
     }
 
-    /* ---- Dizzy: poked too many times too fast ---- */
+    /* ---- Conduct mode: drag across plants to sing in sequence ---- */
+    _setupConduct() {
+        var self = this;
+        var stage = document.getElementById('garden-stage');
+
+        stage.addEventListener('pointerdown', function(e) {
+            if (self.mode !== MODES.CONDUCT) return;
+            self._conducting = true;
+            self._conductPath = [];
+            self._lastConductIndex = -1;
+            document.body.classList.add('conducting');
+            self._handleConductMove(e);
+        });
+
+        stage.addEventListener('pointermove', function(e) {
+            if (!self._conducting) return;
+            self._handleConductMove(e);
+        });
+
+        var endConduct = function() {
+            if (!self._conducting) return;
+            self._conducting = false;
+            self._conductPath = [];
+            self._lastConductIndex = -1;
+            document.body.classList.remove('conducting');
+        };
+        document.addEventListener('pointerup', endConduct);
+        document.addEventListener('pointercancel', endConduct);
+    }
+
+    _handleConductMove(e) {
+        var el = document.elementFromPoint(e.clientX, e.clientY);
+        if (!el) return;
+        var plotEl = el.closest('.plot');
+        if (!plotEl) return;
+        var idx = parseInt(plotEl.dataset.index);
+        if (idx === this._lastConductIndex) return;
+        var plot = this.plots[idx];
+        if (!plot || !plot.planted) return;
+        this._lastConductIndex = idx;
+        this._conductPath.push(idx);
+        plot.lastTouch = Date.now();
+        if (plot.sleeping) this._wakePlot(idx);
+        if (plot.dizzy) return;
+        var plant = getPlantById(plot.plantType);
+        if (!plant) return;
+        this._triggerSingVisual(idx, plant);
+        var phrase = this.audio.singPhrase(plant.id, [plant.audio.notes[Math.floor(Math.random() * plant.audio.notes.length)]], plot.waterLevel, { stepMs: 180 });
+        var self = this;
+        phrase.forEach(function(syll) {
+            setTimeout(function() {
+                self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
+            }, syll.t);
+        });
+    }
+
+    _triggerSingVisual(index, plant) {
+        var plot = this.plots[index];
+        var container = plot.element.querySelector('.plant-container');
+        container.classList.remove('plant-singing');
+        void container.offsetWidth;
+        container.classList.add('plant-singing');
+        setTimeout(function() {
+            container.classList.remove('plant-singing');
+        }, 500);
+        plot.element.classList.add('plot-singing');
+        setTimeout(function() {
+            plot.element.classList.remove('plot-singing');
+        }, 400);
+        if (plot.waterLevel >= 2) {
+            this.effects.spawnLightRays(plot.element);
+        }
+    }
+
+    /* ---- Dizzy ---- */
     _makeDizzy(index) {
         var plot = this.plots[index];
         var self = this;
@@ -302,7 +377,7 @@ class Game {
         }, DIZZY_LAST_MS);
     }
 
-    /* ---- Plant selection buttons ---- */
+    /* ---- Plant buttons ---- */
     createPlantButtons() {
         var container = document.getElementById('plant-buttons');
         var self = this;
@@ -322,46 +397,46 @@ class Game {
         });
     }
 
-    /* ---- Controls setup ---- */
+    /* ---- Controls ---- */
     setupControls() {
         var self = this;
 
-        document.getElementById('water-btn').addEventListener('click', function() {
-            self.toggleWaterMode();
+        document.querySelectorAll('.mode-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.setMode(btn.dataset.mode);
+            });
         });
 
         document.getElementById('play-btn').addEventListener('click', function() {
             self.playMelody();
         });
-
-        document.getElementById('clear-btn').addEventListener('click', function() {
-            self.clearGarden();
+        document.getElementById('harmony-btn').addEventListener('click', function() {
+            self.harmonyChoir();
         });
-
         document.getElementById('chaos-btn').addEventListener('click', function() {
             self.chaosChoir();
         });
-
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            self.clearGarden();
+        });
         document.getElementById('mute-btn').addEventListener('click', function() {
             self.toggleMute();
         });
-
+        document.getElementById('time-btn').addEventListener('click', function() {
+            self.toggleDayNight();
+        });
         document.getElementById('help-btn').addEventListener('click', function() {
             self.showHelp();
         });
-
         document.getElementById('close-help-btn').addEventListener('click', function() {
             self.hideHelp();
         });
-
         document.getElementById('help-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                self.hideHelp();
-            }
+            if (e.target === this) self.hideHelp();
         });
     }
 
-    /* ---- Keyboard shortcuts ---- */
+    /* ---- Keyboard ---- */
     setupKeyboard() {
         var self = this;
         document.addEventListener('keydown', function(e) {
@@ -373,7 +448,6 @@ class Game {
                 }
                 return;
             }
-
             var helpVisible = !document.getElementById('help-modal').classList.contains('hidden');
             if (helpVisible) {
                 if (e.key === 'Escape' || e.key === 'h' || e.key === 'H' || e.key === 'Enter') {
@@ -381,71 +455,81 @@ class Game {
                 }
                 return;
             }
-
             switch (e.key) {
                 case ' ':
                     e.preventDefault();
                     self.playMelody();
                     break;
-                case 'w': case 'W':
-                    self.toggleWaterMode();
-                    break;
-                case 'c': case 'C':
-                    self.clearGarden();
+                case '1': self.setMode(MODES.PLANT); break;
+                case '2': self.setMode(MODES.CONDUCT); break;
+                case '3': self.setMode(MODES.WATER); break;
+                case 'n': case 'N':
+                    self.toggleDayNight();
                     break;
                 case 'm': case 'M':
                     self.toggleMute();
                     break;
-                case 'x': case 'X':
-                    self.chaosChoir();
-                    break;
                 case 'h': case 'H':
                     self.showHelp();
                     break;
+                case 'c': case 'C':
+                    self.clearGarden();
+                    break;
+                case 'x': case 'X':
+                    self.chaosChoir();
+                    break;
                 default:
-                    /* Number keys 1-9 select plants 1-9 */
                     if (e.key >= '1' && e.key <= '9') {
                         var idx = parseInt(e.key) - 1;
-                        if (idx < PLANT_TYPES.length) {
-                            self.selectPlantType(PLANT_TYPES[idx].id);
-                        }
+                        if (idx < PLANT_TYPES.length) self.selectPlantType(PLANT_TYPES[idx].id);
                     }
                     break;
             }
         });
     }
 
-    /* ---- Plant selection ---- */
-    selectPlantType(plantId) {
-        this.selectedPlantType = plantId;
-        this.waterMode = false;
+    /* ---- Mode switching ---- */
+    setMode(mode) {
+        this.mode = mode;
+        if (mode === MODES.PLANT) {
+            /* keep selected plant */
+        }
         this.updateUI();
     }
 
-    /* ---- Plot click handler ---- */
+    selectPlantType(plantId) {
+        this.selectedPlantType = plantId;
+        this.mode = MODES.PLANT;
+        this.updateUI();
+    }
+
+    /* ---- Plot click ---- */
     handlePlotClick(index) {
         if (index < 0 || index >= this.plots.length) return;
         var plot = this.plots[index];
 
-        if (this.waterMode) {
+        if (this.mode === MODES.WATER) {
             if (plot.planted) {
                 this.waterPlant(index);
             } else {
-                /* Watering dirt deserves ridicule */
                 this.audio.playRaspberry();
                 this.audio.playSplat();
-                this.showToast('You watered... dirt. It is unimpressed.');
+                this.showToast("You watered... dirt. It is unimpressed.");
             }
+        } else if (this.mode === MODES.CONDUCT) {
+            /* handled by drag; single tap still sings */
+            if (plot.planted) this.clickPlant(index, false);
         } else {
+            /* PLANT mode */
             if (!plot.planted) {
                 this.plantInPlot(index);
             } else {
-                this.clickPlant(index);
+                this.clickPlant(index, false);
             }
         }
     }
 
-    /* ---- Plant in a plot ---- */
+    /* ---- Plant with growth stages ---- */
     plantInPlot(index) {
         var plant = getPlantById(this.selectedPlantType);
         if (!plant) return;
@@ -453,23 +537,41 @@ class Game {
         plot.planted = true;
         plot.plantType = plant.id;
         plot.waterLevel = 0;
+        plot.stage = 0;
+        plot.lastTouch = Date.now();
 
         var container = plot.element.querySelector('.plant-container');
         container.innerHTML = this._wrapPlantSVG(plant.renderSVG(0));
-        container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-growing';
-        setTimeout(function() {
-            container.classList.remove('plant-growing');
-        }, 600);
+        container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-growing stage-seed';
 
-        /* Curious little "hm?" when planted */
-        plot.lastTouch = Date.now();
-        this.audio.playVoice(plant.id, plant.audio.notes[0], 0, 150);
+        this.audio.playSparkle();
         this.effects.spawnSparkles(plot.element);
-        this.effects.spawnPetals(plot.element, plant.colors.primary);
+        this._speakRandom(index, 'plant');
+
+        var self = this;
+        /* seed -> sprout */
+        setTimeout(function() {
+            if (!plot.planted) return;
+            plot.stage = 1;
+            container.className = 'plant-container plant-swaying ' + plant.animClass + ' stage-sprout';
+            self.effects.spawnSparkles(plot.element);
+        }, STAGE_SEED_MS);
+
+        /* sprout -> bloom */
+        setTimeout(function() {
+            if (!plot.planted) return;
+            plot.stage = 2;
+            container.className = 'plant-container plant-swaying ' + plant.animClass + ' stage-bloom';
+            self.audio.playVoice(plant.id, plant.audio.notes[0], 0, 0);
+            self.effects.spawnSparkles(plot.element);
+            self.effects.spawnPetals(plot.element, plant.colors.primary);
+            self._speakRandom(index, 'bloom');
+        }, STAGE_SEED_MS + STAGE_SPROUT_MS);
+
         this.updateUI();
     }
 
-    /* ---- Click a planted plot (sing) ---- */
+    /* ---- Click plant to sing ---- */
     clickPlant(index, fromMelody) {
         var plot = this.plots[index];
         if (!plot.planted) return;
@@ -477,11 +579,9 @@ class Game {
         if (!plant) return;
 
         var self = this;
-
-        /* v7: wake if sleeping, count rapid pokes for dizzy */
         plot.lastTouch = Date.now();
         if (plot.sleeping) this._wakePlot(index);
-        if (plot.dizzy) return; /* too dizzy to sing right now */
+        if (plot.dizzy) return;
 
         if (!fromMelody) {
             var now = Date.now();
@@ -497,24 +597,9 @@ class Game {
             if (Math.random() < 0.22) this._speakRandom(index, 'click');
         }
 
-        /* Humanoid voice: sing a silly syllable phrase */
         var phrase = this.audio.singPhrase(plant.id, plant.audio.notes, plot.waterLevel);
+        this._triggerSingVisual(index, plant);
 
-        /* Restart singing animation with plant's unique animClass */
-        var container = plot.element.querySelector('.plant-container');
-        container.classList.remove('plant-singing');
-        void container.offsetWidth;
-        container.classList.add('plant-singing');
-        setTimeout(function() {
-            container.classList.remove('plant-singing');
-        }, 800);
-
-        plot.element.classList.add('plot-singing');
-        setTimeout(function() {
-            plot.element.classList.remove('plot-singing');
-        }, 600);
-
-        /* Spawn singing word critters synced to the voice */
         phrase.forEach(function(syll) {
             setTimeout(function() {
                 self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
@@ -522,18 +607,13 @@ class Game {
         });
         if (plot.waterLevel >= 2) {
             setTimeout(function() {
-                self.effects.spawnNote(plot.element, plant.colors.secondary, phrase.length ? phrase[0].text : 'La');
-            }, 60);
-            if (Math.random() < 0.5) {
-                setTimeout(function() {
-                    self.effects.spawnHearts(plot.element);
-                    self.effects.spawnLightRays(plot.element);
-                }, 320);
-            }
+                self.effects.spawnHearts(plot.element);
+                self.effects.spawnLightRays(plot.element);
+            }, 200);
         }
     }
 
-    /* ---- Water a plant ---- */
+    /* ---- Water ---- */
     waterPlant(index) {
         var plot = this.plots[index];
         if (!plot.planted) return;
@@ -547,14 +627,15 @@ class Game {
 
         var container = plot.element.querySelector('.plant-container');
         container.innerHTML = this._wrapPlantSVG(plant.renderSVG(plot.waterLevel));
-        container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-singing';
+        container.className = 'plant-container plant-swaying ' + plant.animClass +
+            ' stage-' + (plot.stage === 0 ? 'seed' : plot.stage === 1 ? 'sprout' : 'bloom') +
+            ' plant-singing';
         setTimeout(function() {
             container.classList.remove('plant-singing');
         }, 600);
 
         this.effects.spawnWaterDrops(plot.element);
 
-        /* v7: overwater = hiccup + burp + bubbles + silly line */
         if (plot.waterLevel === 3) {
             this.audio.playHiccup();
             setTimeout(function() { self.audio.playBurp(); }, 160);
@@ -562,50 +643,35 @@ class Game {
             this._speakRandom(index, 'overwater');
         } else {
             this._speakRandom(index, 'water');
-            /* Happy rising "glug-ah!" */
             this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
             this.audio.playVoice(plant.id, plant.audio.notes[0] * 1.33, plot.waterLevel, 150);
         }
 
         var labels = ['Dry', 'Watered', 'Well-watered', 'Lush!'];
         this.showToast(plant.name + ': ' + labels[plot.waterLevel]);
-
         this.updateUI();
     }
 
-    /* ---- Toggle water mode ---- */
-    toggleWaterMode() {
-        this.waterMode = !this.waterMode;
-        if (this.waterMode) {
-            this.showToast('Water mode on! Click a plant to water it.');
-        }
-        this.updateUI();
-    }
-
-    /* ---- Play melody (all plants in sequence) ---- */
+    /* ---- Melody (sequence) ---- */
     playMelody() {
         if (this.isPlayingMelody) {
             this.melodyStopped = true;
             return;
         }
-
         var plantedIndices = [];
         for (var i = 0; i < this.plots.length; i++) {
             if (this.plots[i].planted) plantedIndices.push(i);
         }
-
         if (plantedIndices.length === 0) {
             this.showToast('Plant some flowers first!');
             return;
         }
-
         this.isPlayingMelody = true;
         this.melodyStopped = false;
         this.updateUI();
 
         var self = this;
         var step = 0;
-
         function playNext() {
             if (self.melodyStopped || step >= plantedIndices.length) {
                 self.isPlayingMelody = false;
@@ -615,12 +681,42 @@ class Game {
             }
             self.clickPlant(plantedIndices[step], true);
             step++;
-            setTimeout(playNext, 750);
+            setTimeout(playNext, 700);
         }
         playNext();
     }
 
-    /* ---- CHAOS CHOIR: every plant sings at once, absurdly ---- */
+    /* ---- Harmony: all sing together in tune ---- */
+    harmonyChoir() {
+        var planted = [];
+        for (var i = 0; i < this.plots.length; i++) {
+            if (this.plots[i].planted) planted.push(i);
+        }
+        if (planted.length === 0) {
+            this.showToast('Plant some flowers first!');
+            return;
+        }
+        var self = this;
+        /* Root chord: each plant sings its first note in a C-major-ish stack */
+        planted.forEach(function(idx, n) {
+            var plot = self.plots[idx];
+            var plant = getPlantById(plot.plantType);
+            if (!plant) return;
+            var wl = Math.max(plot.waterLevel, 1);
+            var phrase = self.audio.singPhrase(plant.id, plant.audio.notes, wl, { stepMs: 300 });
+            phrase.forEach(function(syll) {
+                setTimeout(function() {
+                    self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
+                }, syll.t);
+            });
+            self._triggerSingVisual(idx, plant);
+            plot.lastTouch = Date.now();
+        });
+        this.effects.spawnLightRays(this.plots[planted[0]].element);
+        this.showToast('Garden in harmony! \u266C');
+    }
+
+    /* ---- Chaos ---- */
     chaosChoir() {
         var planted = [];
         for (var i = 0; i < this.plots.length; i++) {
@@ -645,10 +741,9 @@ class Game {
                     if (Math.random() < 0.35) self.effects.spawnSparkles(plot.element);
                 }, syll.t + n * 120);
             });
+            self._triggerSingVisual(idx, plant);
         });
         this.showToast('TOTAL GARDEN CHAOS!');
-
-        /* v7: someone in the choir burps, someone blows a raspberry */
         setTimeout(function() { self.audio.playBurp(); }, 500 + Math.random() * 700);
         setTimeout(function() { self.audio.playRaspberry(); }, 900 + Math.random() * 900);
         setTimeout(function() { self.audio.playGiggle(380); }, 1300 + Math.random() * 600);
@@ -657,16 +752,16 @@ class Game {
         }
     }
 
-    /* ---- Clear all plants ---- */
+    /* ---- Clear ---- */
     clearGarden() {
         this.melodyStopped = true;
         this.isPlayingMelody = false;
-
         for (var i = 0; i < this.plots.length; i++) {
             var plot = this.plots[i];
             plot.planted = false;
             plot.plantType = null;
             plot.waterLevel = 0;
+            plot.stage = 0;
             plot.sleeping = false;
             plot.dizzy = false;
             plot.clickTimes.length = 0;
@@ -675,19 +770,18 @@ class Game {
             container.innerHTML = '';
             container.className = 'plant-container';
             plot.element.classList.remove('water-mode', 'can-plant', 'plot-singing',
-                'plant-sleeping', 'plant-dizzy', 'plant-tickle');
+                'plant-sleeping', 'plant-dizzy', 'plant-tickle', 'stage-seed', 'stage-sprout', 'stage-bloom');
             plot.element.style.setProperty('--lean', '0deg');
             var bubble = plot.element.querySelector('.speech-bubble');
             if (bubble) bubble.remove();
         }
-
-        this.waterMode = false;
+        this.mode = MODES.PLANT;
         this.effects.clear();
         this.updateUI();
         this.showToast('Garden cleared!');
     }
 
-    /* ---- Toggle mute ---- */
+    /* ---- Mute ---- */
     toggleMute() {
         this.muted = !this.muted;
         this.audio.setMuted(this.muted);
@@ -695,22 +789,43 @@ class Game {
         this.showToast(this.muted ? 'Muted' : 'Sound on');
     }
 
-    /* ---- Help modal ---- */
+    /* ---- Day / Night ---- */
+    toggleDayNight() {
+        this.isNight = !this.isNight;
+        this.applyDayNight();
+        if (this.isNight) {
+            this.audio.startPad();
+            this.showToast('Night falls... the garden glows.');
+        } else {
+            this.audio.stopPad();
+            this.showToast('Morning breaks!');
+        }
+        this.updateUI();
+    }
+
+    applyDayNight() {
+        if (this.isNight) {
+            document.body.classList.remove('day');
+        } else {
+            document.body.classList.add('day');
+        }
+    }
+
+    /* ---- Help ---- */
     showHelp() {
         document.getElementById('help-modal').classList.remove('hidden');
     }
-
     hideHelp() {
         document.getElementById('help-modal').classList.add('hidden');
     }
 
-    /* ---- Wrap SVG with sway/sing wrapper divs ---- */
+    /* ---- Wrap SVG ---- */
     _wrapPlantSVG(svgString) {
         return '<div class="plant-sway-wrapper"><div class="plant-sing-wrapper">' +
             svgString + '</div></div>';
     }
 
-    /* ---- Update UI state ---- */
+    /* ---- Update UI ---- */
     updateUI() {
         var buttons = document.querySelectorAll('.plant-btn');
         for (var i = 0; i < buttons.length; i++) {
@@ -721,40 +836,43 @@ class Game {
             }
         }
 
-        var waterBtn = document.getElementById('water-btn');
-        if (this.waterMode) {
-            waterBtn.classList.add('active');
-        } else {
-            waterBtn.classList.remove('active');
+        var modeBtns = document.querySelectorAll('.mode-btn');
+        for (var m = 0; m < modeBtns.length; m++) {
+            if (modeBtns[m].dataset.mode === this.mode) {
+                modeBtns[m].classList.add('active');
+            } else {
+                modeBtns[m].classList.remove('active');
+            }
         }
 
         var playBtn = document.getElementById('play-btn');
-        var playLabel = playBtn.querySelector('.btn-label');
-        var playIcon = playBtn.querySelector('.btn-icon');
+        var playLabel = playBtn.querySelector('.d-lbl');
+        var playIcon = playBtn.querySelector('.d-ico');
         if (this.isPlayingMelody) {
             playBtn.classList.add('playing');
             playLabel.textContent = 'Stop';
             playIcon.textContent = '\u23F9';
         } else {
             playBtn.classList.remove('playing');
-            playLabel.textContent = 'Play Melody';
+            playLabel.textContent = 'Play';
             playIcon.textContent = '\u25B6';
         }
 
         var muteBtn = document.getElementById('mute-btn');
         muteBtn.textContent = this.muted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
 
+        var timeBtn = document.getElementById('time-btn');
+        timeBtn.textContent = this.isNight ? '\uD83C\uDF19' : '\u2600\uFE0F';
+
         for (var j = 0; j < this.plots.length; j++) {
             var plot = this.plots[j];
             var el = plot.element;
 
-            if (this.waterMode && plot.planted) {
-                el.classList.add('water-mode');
-            } else {
-                el.classList.remove('water-mode');
-            }
+            el.classList.remove('water-mode', 'conduct-mode');
+            if (this.mode === MODES.WATER && plot.planted) el.classList.add('water-mode');
+            if (this.mode === MODES.CONDUCT && plot.planted) el.classList.add('conduct-mode');
 
-            if (!plot.planted && !this.waterMode && this.selectedPlantType) {
+            if (!plot.planted && this.mode === MODES.PLANT && this.selectedPlantType) {
                 el.classList.add('can-plant');
             } else {
                 el.classList.remove('can-plant');
