@@ -41,6 +41,41 @@ var SILLY_LINES = {
     bloom: [
         "I BLOOMED!", "Behold my glory!", "Full flower power!",
         "Now I can REALLY sing."
+    ],
+    sneeze: [
+        "Achoo! ...sorry.", "ATCHOO! Excuse me.", "*sniff* A sneeze petal!",
+        "Achoo!! Bless me."
+    ],
+    cough: [
+        "*cough* Ahem.", "Koff! Too much drama.", "*hack* ...I am FINE."
+    ],
+    gossip: [
+        "Psst... the fern never waters.", "I heard the rose is fake.",
+        "Rumor: the moon watches us.", "Do not tell... but I love roots."
+    ],
+    blush: [
+        "Oh! Still here?", "Stop staring, I might wilt.",
+        "I was not posing. You were.", "Look away, I am shy."
+    ],
+    bored: [
+        "Are you just watching?", "Anytime now, human.",
+        "This is the poke part.", "I am not a statue, you know."
+    ],
+    sleeptalk: [
+        "...five more blooms...", "...zzz... encore...",
+        "...do not poke the moon...", "...mm... more rain..."
+    ],
+    day: [
+        "Aaah! Too bright!", "Who turned on the sun?",
+        "Finally, vitamin D!", "*blink blink* My eyes!"
+    ],
+    nightStart: [
+        "Ooh. Mood lighting.", "Now we GLOW.",
+        "The night is ours.", "*sparkle* Showtime."
+    ],
+    twin: [
+        "Hey, twin!", "Copycat!", "Twinsies! Harmonize?",
+        "Twins! Unison time."
     ]
 };
 
@@ -74,6 +109,9 @@ class Game {
         this._conductPath = [];
         this._conducting = false;
         this._lastConductIndex = -1;
+        this._hoverIndex = -1;
+        this._chatterTimer = null;
+        this._boredTimer = null;
     }
 
     init() {
@@ -92,6 +130,8 @@ class Game {
         this._setupLean();
         this._setupTickle();
         this._setupConduct();
+        this._startChatterLoop();
+        this._startBoredLoop();
     }
 
     /* ---- Toast ---- */
@@ -161,6 +201,7 @@ class Game {
                 dizzy: false,
                 clickTimes: [],
                 lastTickle: 0,
+                lastBlush: 0,
                 stage: 0,
                 growTimers: []
             });
@@ -213,9 +254,113 @@ class Game {
                 if (plot.sleeping) {
                     if (Math.random() < 0.5) self.effects.spawnZzz(plot.element);
                     if (Math.random() < 0.12) self.audio.playSnore();
+                    if (Math.random() < 0.10) {
+                        self.audio.playMumble(115 + Math.random() * 50);
+                        self._speakRandom(i, 'sleeptalk');
+                    }
                 }
             }
         }, 1400);
+    }
+
+    /* ---- Chatter loop: awake plants gossip and hum to themselves ---- */
+    _startChatterLoop() {
+        var self = this;
+        this._chatterTimer = setInterval(function() {
+            if (self.muted) return;
+            if (document.getElementById('garden-screen').classList.contains('hidden')) return;
+            var awake = [];
+            for (var i = 0; i < self.plots.length; i++) {
+                var p = self.plots[i];
+                if (p.planted && !p.sleeping && !p.dizzy && p.stage >= 1) awake.push(i);
+            }
+            if (!awake.length) return;
+            var idx = awake[Math.floor(Math.random() * awake.length)];
+            if (Math.random() < 0.6) {
+                self.audio.playMumble(120 + Math.random() * 90);
+                self._speakRandom(idx, 'gossip');
+            } else {
+                self.audio.playHum(150 + Math.random() * 70);
+                self._speak(idx, '*humming*');
+            }
+        }, 8500);
+    }
+
+    /* ---- Bored loop: plants nag when the player just stares at them ---- */
+    _startBoredLoop() {
+        var self = this;
+        this._boredTimer = setInterval(function() {
+            if (self.muted) return;
+            if (document.getElementById('garden-screen').classList.contains('hidden')) return;
+            var latest = 0;
+            var awake = [];
+            for (var i = 0; i < self.plots.length; i++) {
+                var p = self.plots[i];
+                if (!p.planted) continue;
+                if (p.lastTouch > latest) latest = p.lastTouch;
+                if (!p.sleeping && !p.dizzy && p.stage >= 1) awake.push(i);
+            }
+            if (!awake.length) return;
+            if (Date.now() - latest < 9500) return;
+            var idx = awake[Math.floor(Math.random() * awake.length)];
+            if (Math.random() < 0.5) self.audio.playThroatClear();
+            else self.audio.playBabble(3);
+            self.effects.spawnSoundWave(self.plots[idx].element, '#a78bfa');
+            self._speakRandom(idx, 'bored');
+        }, 11000);
+    }
+
+    /* ---- Contagious sneeze (overwatering spreads through the garden) ---- */
+    _sneeze(index, depth) {
+        var plot = this.plots[index];
+        if (!plot || !plot.planted) return;
+        var self = this;
+        plot.lastTouch = Date.now();
+        this.audio.playSneeze();
+        this.effects.spawnSneeze(plot.element);
+        plot.element.classList.add('plant-sneeze');
+        setTimeout(function() { plot.element.classList.remove('plant-sneeze'); }, 900);
+        if (depth < 2) this._speakRandom(index, 'sneeze');
+        if (depth >= 3) return;
+        /* Only grid neighbours can catch it; the chain fades with distance. */
+        var cols = 4;
+        var cand = [index - 1, index + 1, index - cols, index + cols];
+        var nbrs = [];
+        for (var n = 0; n < cand.length; n++) {
+            var j = cand[n];
+            if (j < 0 || j >= this.plots.length) continue;
+            if (j === index - 1 && index % cols === 0) continue;
+            if (j === index + 1 && index % cols === cols - 1) continue;
+            nbrs.push(j);
+        }
+        nbrs.forEach(function(j, k) {
+            if (Math.random() > 0.5) return;
+            var np = self.plots[j];
+            if (!np.planted || np.dizzy) return;
+            /* A sneeze is loud enough to jolt a napping neighbour awake. */
+            if (np.sleeping) {
+                np.sleeping = false;
+                np.element.classList.remove('plant-sleeping');
+            }
+            setTimeout(function() { self._sneeze(j, depth + 1); }, 280 + k * 150);
+        });
+    }
+
+    /* ---- Reaction to the day / night switch ---- */
+    _reactDayNight() {
+        var self = this;
+        var roster = [];
+        for (var i = 0; i < this.plots.length; i++) {
+            var p = this.plots[i];
+            if (p.planted && !p.sleeping) roster.push(i);
+        }
+        if (!roster.length) return;
+        var ctxName = this.isNight ? 'nightStart' : 'day';
+        roster.forEach(function(idx, k) {
+            setTimeout(function() { self._speakRandom(idx, ctxName); }, k * 240);
+        });
+        if (this.isNight) this.audio.playHum(165);
+        else this.audio.playSigh();
     }
 
     /* ---- Cursor lean ---- */
@@ -225,6 +370,7 @@ class Game {
         garden.addEventListener('pointermove', function(e) {
             self._cursorX = e.clientX;
             self._cursorY = e.clientY;
+            self._checkHover(e);
             if (!self._leanRaf) {
                 self._leanRaf = requestAnimationFrame(function() {
                     self._leanRaf = 0;
@@ -235,6 +381,7 @@ class Game {
         garden.addEventListener('pointerleave', function() {
             self._cursorX = -9999;
             self._cursorY = -9999;
+            self._hoverIndex = -1;
             for (var i = 0; i < self.plots.length; i++) {
                 self.plots[i].element.style.setProperty('--lean', '0deg');
             }
@@ -257,6 +404,30 @@ class Game {
             var deg = Math.max(-maxLean, Math.min(maxLean, (dx / 60) * strength * maxLean));
             plot.element.style.setProperty('--lean', deg.toFixed(2) + 'deg');
         }
+    }
+
+    /* ---- Hover blush: a plant gets shy when the cursor lingers on it ---- */
+    _checkHover(e) {
+        if (this.mode === MODES.CONDUCT || this._conducting) return;
+        var el = document.elementFromPoint(e.clientX, e.clientY);
+        var plotEl = el ? el.closest('.plot') : null;
+        if (!plotEl) {
+            this._hoverIndex = -1;
+            return;
+        }
+        var idx = parseInt(plotEl.dataset.index);
+        if (idx === this._hoverIndex) return;
+        this._hoverIndex = idx;
+        var plot = this.plots[idx];
+        if (!plot || !plot.planted || plot.sleeping || plot.dizzy || plot.stage === 0) return;
+        var now = Date.now();
+        if (now - (plot.lastBlush || 0) < 4000) return;
+        plot.lastBlush = now;
+        var self = this;
+        plot.element.classList.add('plant-blush');
+        setTimeout(function() { plot.element.classList.remove('plant-blush'); }, 900);
+        this.audio.playWhistle(900 + Math.random() * 500);
+        if (Math.random() < 0.35) this._speakRandom(idx, 'blush');
     }
 
     /* ---- Tickle ---- */
@@ -299,6 +470,7 @@ class Game {
             self._conductPath = [];
             self._lastConductIndex = -1;
             document.body.classList.add('conducting');
+            self.audio.playSlideWhistle(true);
             self._handleConductMove(e);
         });
 
@@ -368,14 +540,15 @@ class Game {
         var plot = this.plots[index];
         var self = this;
         plot.dizzy = true;
-        plot.element.classList.add('plant-dizzy');
+        plot.element.classList.add('plant-dizzy', 'plant-cough');
         this.audio.playBoing();
         this.audio.playRaspberry();
         this.effects.spawnDizzyStars(plot.element);
         this._speakRandom(index, 'dizzy');
+        setTimeout(function() { self.audio.playCough(); }, 240);
         setTimeout(function() {
             plot.dizzy = false;
-            plot.element.classList.remove('plant-dizzy');
+            plot.element.classList.remove('plant-dizzy', 'plant-cough');
         }, DIZZY_LAST_MS);
     }
 
@@ -516,6 +689,7 @@ class Game {
             } else {
                 this.audio.playRaspberry();
                 this.audio.playSplat();
+                this.audio.playSigh();
                 this.showToast("You watered... dirt. It is unimpressed.");
             }
         } else if (this.mode === MODES.CONDUCT) {
@@ -549,11 +723,24 @@ class Game {
         container.innerHTML = this._wrapPlantSVG(plant.renderSVG(0));
         container.className = 'plant-container plant-swaying ' + plant.animClass + ' plant-growing stage-seed';
 
+        var self = this;
+        var twinIdx = -1;
+        for (var t = 0; t < this.plots.length; t++) {
+            if (t !== index && this.plots[t].planted && this.plots[t].plantType === plant.id) {
+                twinIdx = t; break;
+            }
+        }
         this.audio.playSparkle();
         this.effects.spawnSparkles(plot.element);
-        this._speakRandom(index, 'plant');
+        if (twinIdx >= 0) {
+            setTimeout(function() {
+                self._speakRandom(index, 'twin');
+                self.audio.playWhistle(980 + Math.random() * 400);
+            }, 1500);
+        } else {
+            this._speakRandom(index, 'plant');
+        }
 
-        var self = this;
         /* seed -> sprout */
         var t1 = setTimeout(function() {
             if (!plot.planted || plot.plantType !== plant.id) return;
@@ -650,12 +837,15 @@ class Game {
         }, 600);
 
         this.effects.spawnWaterDrops(plot.element);
+        this.audio.playGulp();
 
         if (plot.waterLevel === 3) {
             this.audio.playHiccup();
             setTimeout(function() { self.audio.playBurp(); }, 160);
             this.effects.spawnBubbles(plot.element);
             this._speakRandom(index, 'overwater');
+            /* Soaked plants sneeze — and it is contagious! */
+            setTimeout(function() { self._sneeze(index, 0); }, 620);
         } else {
             this._speakRandom(index, 'water');
             if (plot.stage >= 1) {
@@ -743,6 +933,8 @@ class Game {
             plot.lastTouch = Date.now();
         });
         this.effects.spawnLightRays(this.plots[singers[0]].element);
+        this.audio.playCheer();
+        setTimeout(function() { self.audio.playWhistle(1200); }, 300 + Math.random() * 300);
         this.showToast('Garden in harmony! \u266C');
     }
 
@@ -790,6 +982,16 @@ class Game {
         setTimeout(function() { self.audio.playBurp(); }, 500 + Math.random() * 700);
         setTimeout(function() { self.audio.playRaspberry(); }, 900 + Math.random() * 900);
         setTimeout(function() { self.audio.playGiggle(380); }, 1300 + Math.random() * 600);
+        /* Chaos always ends with a garden-wide hiccup and a stray sneeze. */
+        setTimeout(function() {
+            var all = [];
+            for (var q = 0; q < self.plots.length; q++) {
+                var pp = self.plots[q];
+                if (pp.planted && !pp.dizzy && !pp.sleeping) all.push(q);
+            }
+            self.audio.playHiccup();
+            if (all.length) self._sneeze(all[Math.floor(Math.random() * all.length)], 0);
+        }, 1800 + Math.random() * 400);
     }
 
     /* ---- Clear ---- */
@@ -808,11 +1010,13 @@ class Game {
             plot.dizzy = false;
             plot.clickTimes.length = 0;
             plot.lastTouch = Date.now();
+            plot.lastBlush = 0;
             var container = plot.element.querySelector('.plant-container');
             container.innerHTML = '';
             container.className = 'plant-container';
             plot.element.classList.remove('water-mode', 'can-plant', 'plot-singing',
-                'plant-sleeping', 'plant-dizzy', 'plant-tickle', 'stage-seed', 'stage-sprout', 'stage-bloom');
+                'plant-sleeping', 'plant-dizzy', 'plant-tickle', 'plant-blush',
+                'plant-sneeze', 'plant-cough', 'stage-seed', 'stage-sprout', 'stage-bloom');
             plot.element.style.setProperty('--lean', '0deg');
             var bubble = plot.element.querySelector('.speech-bubble');
             if (bubble) bubble.remove();
@@ -842,6 +1046,7 @@ class Game {
             this.audio.stopPad();
             this.showToast('Morning breaks!');
         }
+        this._reactDayNight();
         this.updateUI();
     }
 
