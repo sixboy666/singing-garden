@@ -1,7 +1,7 @@
 /* ============================================================
    SINGING GARDEN v9 — AUDIO ENGINE
-   Web Audio synthesis: formant vowel singing, ambient pad,
-   watered harmonies, silly SFX, conduct-mode melody
+   Web Audio synthesis: formant vowel singing, watered harmonies,
+   silly SFX, conduct-mode melody
    ============================================================ */
 
 var VOICE_FORMANTS = {
@@ -21,9 +21,6 @@ class AudioEngine {
         this.ctx = null;
         this.master = null;
         this.muted = false;
-        this.padNodes = [];
-        this.padGain = null;
-        this.padPlaying = false;
     }
 
     init() {
@@ -169,61 +166,6 @@ class AudioEngine {
         var voice = VOICE_FORMANTS[voiceType] || VOICE_FORMANTS.airy;
         var start = this.now() + (delayMs || 0) / 1000;
         this._singNote(freq, start, 0.3, voice, waterLevel);
-    }
-
-    /* ---------- Ambient pad (night mode) ---------- */
-    startPad() {
-        if (!this.ctx || this.padPlaying) return;
-        this.padPlaying = true;
-        this.padGain = this.ctx.createGain();
-        this.padGain.gain.value = 0;
-        this.padGain.gain.linearRampToValueAtTime(0.08, this.now() + 1.5);
-        this.padGain.connect(this.master);
-
-        /* Voiced an octave above the old drone (C4-E4-G4-C5) so the night
-           bed feels warm and airy instead of dark and murky. */
-        var freqs = [261.63, 329.63, 392.00, 523.25];
-        for (var i = 0; i < freqs.length; i++) {
-            var osc = this.ctx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freqs[i];
-            var lp = this.ctx.createBiquadFilter();
-            lp.type = 'lowpass';
-            lp.frequency.value = 2400;
-            var g = this.ctx.createGain();
-            g.gain.value = 0.24;
-            /* slow detune drift */
-            var lfo = this.ctx.createOscillator();
-            var lfoG = this.ctx.createGain();
-            lfo.frequency.value = 0.1 + i * 0.07;
-            lfoG.gain.value = 3;
-            lfo.connect(lfoG);
-            lfoG.connect(osc.frequency);
-            osc.connect(lp);
-            lp.connect(g);
-            g.connect(this.padGain);
-            osc.start();
-            lfo.start();
-            this.padNodes.push(osc, lfo);
-        }
-    }
-
-    stopPad() {
-        if (!this.padPlaying) return;
-        this.padPlaying = false;
-        var self = this;
-        if (this.padGain) {
-            this.padGain.gain.cancelScheduledValues(this.now());
-            this.padGain.gain.setValueAtTime(this.padGain.gain.value, this.now());
-            this.padGain.gain.linearRampToValueAtTime(0, this.now() + 1.2);
-        }
-        setTimeout(function() {
-            for (var i = 0; i < self.padNodes.length; i++) {
-                try { self.padNodes[i].stop(); } catch (e) {}
-            }
-            self.padNodes = [];
-            self.padGain = null;
-        }, 1400);
     }
 
     /* ---------- Silly SFX ---------- */
