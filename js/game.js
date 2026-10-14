@@ -161,7 +161,8 @@ class Game {
                 dizzy: false,
                 clickTimes: [],
                 lastTickle: 0,
-                stage: 0
+                stage: 0,
+                growTimers: []
             });
         }
     }
@@ -330,11 +331,12 @@ class Game {
         this._conductPath.push(idx);
         plot.lastTouch = Date.now();
         if (plot.sleeping) this._wakePlot(idx);
-        if (plot.dizzy) return;
+        if (plot.dizzy || plot.stage === 0) return;
         var plant = getPlantById(plot.plantType);
         if (!plant) return;
         this._triggerSingVisual(idx, plant);
-        var phrase = this.audio.singPhrase(plant.id, [plant.audio.notes[Math.floor(Math.random() * plant.audio.notes.length)]], plot.waterLevel, { stepMs: 180 });
+        var conductNote = plot.stage === 1 ? plant.audio.notes[0] : plant.audio.notes[Math.floor(Math.random() * plant.audio.notes.length)];
+        var phrase = this.audio.singPhrase(plant.id, [conductNote], plot.waterLevel, { stepMs: 180 });
         var self = this;
         phrase.forEach(function(syll) {
             setTimeout(function() {
@@ -534,6 +536,9 @@ class Game {
         var plant = getPlantById(this.selectedPlantType);
         if (!plant) return;
         var plot = this.plots[index];
+        /* cancel any stale growth timers (defensive against replant races) */
+        if (plot.growTimers) plot.growTimers.forEach(clearTimeout);
+        plot.growTimers = [];
         plot.planted = true;
         plot.plantType = plant.id;
         plot.waterLevel = 0;
@@ -550,16 +555,16 @@ class Game {
 
         var self = this;
         /* seed -> sprout */
-        setTimeout(function() {
-            if (!plot.planted) return;
+        var t1 = setTimeout(function() {
+            if (!plot.planted || plot.plantType !== plant.id) return;
             plot.stage = 1;
             container.className = 'plant-container plant-swaying ' + plant.animClass + ' stage-sprout';
             self.effects.spawnSparkles(plot.element);
         }, STAGE_SEED_MS);
 
         /* sprout -> bloom */
-        setTimeout(function() {
-            if (!plot.planted) return;
+        var t2 = setTimeout(function() {
+            if (!plot.planted || plot.plantType !== plant.id) return;
             plot.stage = 2;
             container.className = 'plant-container plant-swaying ' + plant.animClass + ' stage-bloom';
             self.audio.playVoice(plant.id, plant.audio.notes[0], 0, 0);
@@ -567,6 +572,7 @@ class Game {
             self.effects.spawnPetals(plot.element, plant.colors.primary);
             self._speakRandom(index, 'bloom');
         }, STAGE_SEED_MS + STAGE_SPROUT_MS);
+        plot.growTimers = [t1, t2];
 
         this.updateUI();
     }
@@ -597,7 +603,16 @@ class Game {
             if (Math.random() < 0.22) this._speakRandom(index, 'click');
         }
 
-        var phrase = this.audio.singPhrase(plant.id, plant.audio.notes, plot.waterLevel);
+        /* Growth gating: seeds are too tiny to sing (soft sparkle peep),
+           sprouts manage a single chirp, only bloom-stage plants sing
+           their full phrase. */
+        if (plot.stage === 0) {
+            this.audio.playSparkle();
+            this.effects.spawnSparkles(plot.element);
+            return;
+        }
+        var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
+        var phrase = this.audio.singPhrase(plant.id, notes, plot.waterLevel);
         this._triggerSingVisual(index, plant);
 
         phrase.forEach(function(syll) {
@@ -605,7 +620,7 @@ class Game {
                 self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
             }, syll.t);
         });
-        if (plot.waterLevel >= 2) {
+        if (plot.stage === 2 && plot.waterLevel >= 2) {
             setTimeout(function() {
                 self.effects.spawnHearts(plot.element);
                 self.effects.spawnLightRays(plot.element);
@@ -643,8 +658,10 @@ class Game {
             this._speakRandom(index, 'overwater');
         } else {
             this._speakRandom(index, 'water');
-            this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
-            this.audio.playVoice(plant.id, plant.audio.notes[0] * 1.33, plot.waterLevel, 150);
+            if (plot.stage >= 1) {
+                this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
+                this.audio.playVoice(plant.id, plant.audio.notes[0] * 1.33, plot.waterLevel, 150);
+            }
         }
 
         var labels = ['Dry', 'Watered', 'Well-watered', 'Lush!'];
@@ -697,13 +714,26 @@ class Game {
             return;
         }
         var self = this;
-        /* Root chord: each plant sings its first note in a C-major-ish stack */
-        planted.forEach(function(idx, n) {
+        var singers = [];
+        /* Only grown, non-dizzy plants join: seeds are too small,
+           sprouts contribute a single note, blooms sing their phrase. */
+        planted.forEach(function(idx) {
+            var plot = self.plots[idx];
+            if (plot.stage === 0 || plot.dizzy) return;
+            if (plot.sleeping) self._wakePlot(idx);
+            singers.push(idx);
+        });
+        if (singers.length === 0) {
+            this.showToast('Wait for the little ones to grow!');
+            return;
+        }
+        singers.forEach(function(idx) {
             var plot = self.plots[idx];
             var plant = getPlantById(plot.plantType);
             if (!plant) return;
             var wl = Math.max(plot.waterLevel, 1);
-            var phrase = self.audio.singPhrase(plant.id, plant.audio.notes, wl, { stepMs: 300 });
+            var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
+            var phrase = self.audio.singPhrase(plant.id, notes, wl, { stepMs: 300 });
             phrase.forEach(function(syll) {
                 setTimeout(function() {
                     self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
@@ -712,7 +742,7 @@ class Game {
             self._triggerSingVisual(idx, plant);
             plot.lastTouch = Date.now();
         });
-        this.effects.spawnLightRays(this.plots[planted[0]].element);
+        this.effects.spawnLightRays(this.plots[singers[0]].element);
         this.showToast('Garden in harmony! \u266C');
     }
 
@@ -728,13 +758,25 @@ class Game {
         }
         var transposes = [-12, -5, 0, 7, 12];
         var self = this;
-        planted.forEach(function(idx, n) {
+        var singers = [];
+        planted.forEach(function(idx) {
+            var plot = self.plots[idx];
+            if (plot.stage === 0 || plot.dizzy) return;
+            if (plot.sleeping) self._wakePlot(idx);
+            singers.push(idx);
+        });
+        if (singers.length === 0) {
+            this.showToast('Wait for the little ones to grow!');
+            return;
+        }
+        singers.forEach(function(idx, n) {
             var plot = self.plots[idx];
             var plant = getPlantById(plot.plantType);
             if (!plant) return;
             var tr = transposes[Math.floor(Math.random() * transposes.length)];
             var wl = Math.max(plot.waterLevel, 2);
-            var phrase = self.audio.singPhrase(plant.id, plant.audio.notes, wl, { transpose: tr });
+            var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
+            var phrase = self.audio.singPhrase(plant.id, notes, wl, { transpose: tr });
             phrase.forEach(function(syll) {
                 setTimeout(function() {
                     self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
@@ -742,14 +784,12 @@ class Game {
                 }, syll.t + n * 120);
             });
             self._triggerSingVisual(idx, plant);
+            plot.lastTouch = Date.now();
         });
         this.showToast('TOTAL GARDEN CHAOS!');
         setTimeout(function() { self.audio.playBurp(); }, 500 + Math.random() * 700);
         setTimeout(function() { self.audio.playRaspberry(); }, 900 + Math.random() * 900);
         setTimeout(function() { self.audio.playGiggle(380); }, 1300 + Math.random() * 600);
-        for (var j = 0; j < planted.length; j++) {
-            this.plots[planted[j]].lastTouch = Date.now();
-        }
     }
 
     /* ---- Clear ---- */
@@ -758,6 +798,8 @@ class Game {
         this.isPlayingMelody = false;
         for (var i = 0; i < this.plots.length; i++) {
             var plot = this.plots[i];
+            if (plot.growTimers) plot.growTimers.forEach(clearTimeout);
+            plot.growTimers = [];
             plot.planted = false;
             plot.plantType = null;
             plot.waterLevel = 0;
