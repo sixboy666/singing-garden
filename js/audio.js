@@ -31,8 +31,17 @@ class AudioEngine {
         var AC = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.8;
-        this.master.connect(this.ctx.destination);
+        this.master.gain.value = 0.7;
+        /* Master limiter: several plants can sing at once (harmony/chaos),
+           so the bus goes through a compressor before the speakers. */
+        this.comp = this.ctx.createDynamicsCompressor();
+        this.comp.threshold.value = -16;
+        this.comp.knee.value = 24;
+        this.comp.ratio.value = 8;
+        this.comp.attack.value = 0.004;
+        this.comp.release.value = 0.22;
+        this.master.connect(this.comp);
+        this.comp.connect(this.ctx.destination);
     }
 
     resume() {
@@ -41,7 +50,7 @@ class AudioEngine {
 
     setMuted(m) {
         this.muted = m;
-        if (this.master) this.master.gain.value = m ? 0 : 0.8;
+        if (this.master) this.master.gain.value = m ? 0 : 0.7;
     }
 
     now() { return this.ctx ? this.ctx.currentTime : 0; }
@@ -77,43 +86,76 @@ class AudioEngine {
 
     _singNote(freq, start, dur, voice, waterLevel) {
         var ctx = this.ctx;
-        var g = ctx.createGain();
-        g.gain.setValueAtTime(0, start);
-        g.gain.linearRampToValueAtTime(voice.gain, start + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, start + dur);
 
-        /* carrier: sawtooth through formant filters */
+        /* ADSR-ish envelope (gentle attack/release avoids clicks and peaks) */
+        var g = ctx.createGain();
+        var peak = voice.gain;
+        var sustainEnd = Math.max(start + 0.04, start + dur - 0.07);
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.linearRampToValueAtTime(peak, start + 0.035);
+        g.gain.setValueAtTime(peak, sustainEnd);
+        g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+        g.connect(this.master);
+
+        /* Formant summing bus. NOTE: the three vowel bandpass filters MUST
+           run in PARALLEL — chaining narrow bandpass filters in series
+           removes every frequency, which made every plant silent. */
+        var formantSum = ctx.createGain();
+        formantSum.gain.value = 0.8;
+        formantSum.connect(g);
+
+        /* Carriers: a sawtooth for vocal body + a softer triangle an octave
+           up for "ah" air, mixed quietly so stacked voices stay smooth. */
+        var carrierMix = ctx.createGain();
+        carrierMix.gain.value = 0.7;
+
         var osc = ctx.createOscillator();
         osc.type = 'sawtooth';
         osc.frequency.value = freq;
+        var osc2 = ctx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.value = freq * 2;
+        var osc2Gain = ctx.createGain();
+        osc2Gain.gain.value = 0.35;
 
-        var filters = [];
-        var src = osc;
+        osc.connect(carrierMix);
+        osc2.connect(osc2Gain);
+        osc2Gain.connect(carrierMix);
+
+        /* Parallel formant bank: each bandpass gets the same carrier, and
+           each feeds the summing bus. Slightly widened bandwidth (lower Q)
+           so a note always lands inside at least one vowel band. */
+        var formantWeights = [1.0, 0.75, 0.5];
         for (var f = 0; f < voice.vowels.length; f++) {
             var bp = ctx.createBiquadFilter();
             bp.type = 'bandpass';
             bp.frequency.value = voice.vowels[f].f;
-            bp.Q.value = voice.vowels[f].q;
-            src.connect(bp);
-            src = bp;
+            bp.Q.value = Math.max(2.2, voice.vowels[f].q * 0.55);
+            var fg = ctx.createGain();
+            fg.gain.value = formantWeights[f] || 0.5;
+            carrierMix.connect(bp);
+            bp.connect(fg);
+            fg.connect(formantSum);
         }
 
         /* watered plants get a gentle vibrato + shimmer */
+        var lfo = null;
         if (waterLevel && waterLevel >= 1) {
-            var lfo = ctx.createOscillator();
+            lfo = ctx.createOscillator();
             var lfoGain = ctx.createGain();
             lfo.frequency.value = 5;
-            lfoGain.gain.value = waterLevel * 2;
+            lfoGain.gain.value = Math.min(waterLevel * 1.5, 6);
             lfo.connect(lfoGain);
             lfoGain.connect(osc.frequency);
+            lfoGain.connect(osc2.frequency);
             lfo.start(start);
             lfo.stop(start + dur + 0.05);
         }
 
-        src.connect(g);
-        g.connect(this.master);
         osc.start(start);
         osc.stop(start + dur + 0.05);
+        osc2.start(start);
+        osc2.stop(start + dur + 0.05);
     }
 
     /* Single voice blip */
@@ -296,7 +338,8 @@ class AudioEngine {
         osc.frequency.setValueAtTime(200, t);
         osc.frequency.exponentialRampToValueAtTime(600, t + 0.08);
         osc.frequency.exponentialRampToValueAtTime(150, t + 0.3);
-        g.gain.setValueAtTime(0.2, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.2, t + 0.015);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
         osc.connect(g); g.connect(this.master);
         osc.start(t); osc.stop(t + 0.4);
