@@ -51,6 +51,7 @@ class EffectsCanvas {
             p.y += p.vy || 0;
             if (p.vy !== undefined) p.vy += p.gravity || 0;
             if (p.rot !== undefined) p.rot += p.vrot || 0;
+            if (p.grow) p.size = (p.size || 0) + p.grow;
             p.alpha = Math.max(0, p.life / p.maxLife);
             this.drawParticle(p);
             alive.push(p);
@@ -142,6 +143,23 @@ class EffectsCanvas {
             }
             ctx.closePath();
             ctx.fill();
+        } else if (p.type === 'puff') {
+            ctx.globalAlpha = p.alpha * 0.55;
+            ctx.fillStyle = p.color || '#d7fbff';
+            ctx.shadowColor = p.color || '#d7fbff';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size || 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (p.type === 'ring') {
+            ctx.globalAlpha = p.alpha * 0.7;
+            ctx.strokeStyle = p.color || '#5ef2d6';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = p.color || '#5ef2d6';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size || 6, 0, Math.PI * 2);
+            ctx.stroke();
         }
         ctx.restore();
     }
@@ -250,6 +268,30 @@ class EffectsCanvas {
                 life: 80, maxLife: 80, color: '#fcd34d', size: 5
             });
         }
+    }
+
+    /* A puff of spray from a plant sneeze */
+    spawnSneeze(el) {
+        var r = this._rect(el);
+        for (var i = 0; i < 12; i++) {
+            var a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+            var sp = 1.5 + Math.random() * 3;
+            this.add({
+                type: 'puff', x: r.x, y: r.y - 12,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                gravity: 0.06, life: 38, maxLife: 38,
+                color: '#d7fbff', size: 3 + Math.random() * 5
+            });
+        }
+    }
+
+    /* Expanding ring — a plant making a noise at you */
+    spawnSoundWave(el, color) {
+        var r = this._rect(el);
+        this.add({
+            type: 'ring', x: r.x, y: r.y - 10,
+            life: 30, maxLife: 30, color: color || '#5ef2d6', size: 6, grow: 1.6
+        });
     }
 }
 
