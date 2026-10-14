@@ -180,16 +180,18 @@ class AudioEngine {
         this.padGain.gain.linearRampToValueAtTime(0.08, this.now() + 1.5);
         this.padGain.connect(this.master);
 
-        var freqs = [130.81, 196.00, 261.63];
+        /* Voiced an octave above the old drone (C4-E4-G4-C5) so the night
+           bed feels warm and airy instead of dark and murky. */
+        var freqs = [261.63, 329.63, 392.00, 523.25];
         for (var i = 0; i < freqs.length; i++) {
             var osc = this.ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = freqs[i];
             var lp = this.ctx.createBiquadFilter();
             lp.type = 'lowpass';
-            lp.frequency.value = 600;
+            lp.frequency.value = 2400;
             var g = this.ctx.createGain();
-            g.gain.value = 0.33;
+            g.gain.value = 0.24;
             /* slow detune drift */
             var lfo = this.ctx.createOscillator();
             var lfoG = this.ctx.createGain();
