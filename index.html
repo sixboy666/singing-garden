@@ -3,125 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Singing Garden</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <title>Singing Garden — Aurora Bloom</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
+
+        <!-- Aurora background layers -->
+        <div class="aurora-bg">
+            <div class="aurora-band band-1"></div>
+            <div class="aurora-band band-2"></div>
+            <div class="aurora-band band-3"></div>
+            <div class="stars-layer"></div>
+        </div>
+
         <!-- Start Screen -->
         <div id="start-screen" class="screen">
             <div class="start-content">
-                <div class="title-decoration">
-                    <span class="floating-note note-1">&#9834;</span>
-                    <span class="floating-note note-2">&#9835;</span>
-                    <span class="floating-note note-3">&#9833;</span>
-                    <span class="floating-note note-4">&#9836;</span>
+                <div class="title-glow">
+                    <span class="float-note n1">&#9834;</span>
+                    <span class="float-note n2">&#9835;</span>
+                    <span class="float-note n3">&#9833;</span>
                 </div>
                 <h1 class="game-title">Singing Garden</h1>
-                <p class="game-subtitle">Grow strange plants. Make them sing. Create your own garden music!</p>
-                <button id="start-btn" class="big-btn">Start Garden</button>
-                <p class="hint-text">Best experienced with sound on &#128266;</p>
+                <p class="game-subtitle">Aurora Bloom &mdash; grow glowing plants, conduct their song, paint the night with sound.</p>
+                <button id="start-btn" class="big-btn"><span class="btn-glow"></span>Enter the Garden</button>
+                <p class="hint-text">Best with sound on &#128266; &middot; headphones recommended</p>
             </div>
         </div>
 
         <!-- Garden Screen -->
         <div id="garden-screen" class="screen hidden">
-            <!-- Header -->
-            <div id="header">
-                <h2>My Singing Garden</h2>
-                <div id="header-controls">
-                    <button id="mute-btn" class="icon-btn" title="Mute / Unmute">&#128266;</button>
-                    <button id="help-btn" class="icon-btn" title="How to Play">?</button>
+
+            <!-- Top bar -->
+            <div id="top-bar">
+                <div class="brand">
+                    <span class="brand-dot"></span>
+                    <span class="brand-name">Singing Garden</span>
+                </div>
+                <div id="mode-switcher" class="mode-switcher">
+                    <button class="mode-btn active" data-mode="plant" title="Plant mode">&#127793; Plant</button>
+                    <button class="mode-btn" data-mode="conduct" title="Conduct mode: drag across plants">&#127926; Conduct</button>
+                    <button class="mode-btn" data-mode="water" title="Water mode">&#128167; Water</button>
+                </div>
+                <div class="top-controls">
+                    <button id="time-btn" class="icon-btn" title="Toggle day / night">&#127769;</button>
+                    <button id="mute-btn" class="icon-btn" title="Mute">&#128266;</button>
+                    <button id="help-btn" class="icon-btn" title="How to play">?</button>
                 </div>
             </div>
 
-            <!-- Garden Area -->
-            <div id="garden-area">
-                <div id="sky-layer">
-                    <div class="sun"></div>
-                    <div class="shooting-star"></div>
-                    <div class="shooting-star"></div>
-                    <div class="cloud cloud-1"></div>
-                    <div class="cloud cloud-2"></div>
-                    <div class="cloud cloud-3"></div>
-                    <div class="bird bird-1"></div>
-                    <div class="bird bird-2"></div>
-                    <div class="mountains"></div>
+            <!-- Garden stage -->
+            <div id="garden-stage">
+                <div id="sky-decor">
+                    <div class="moon"></div>
+                    <div class="shooting-star s1"></div>
+                    <div class="shooting-star s2"></div>
                 </div>
                 <div id="plots-container"></div>
-                <div id="grass-layer"></div>
+                <div class="ground-glow"></div>
             </div>
 
-            <!-- Controls Bar -->
-            <div id="controls-bar">
-                <div id="plant-selector">
-                    <span class="selector-label">Choose a plant:</span>
+            <!-- Bottom dock -->
+            <div id="bottom-dock">
+                <div id="plant-palette">
                     <div id="plant-buttons"></div>
                 </div>
-                <div id="action-buttons">
-                    <button id="water-btn" class="action-btn water-btn" title="Toggle water mode">
-                        <span class="btn-icon">&#128167;</span>
-                        <span class="btn-label">Water</span>
+                <div id="dock-actions">
+                    <button id="play-btn" class="dock-btn primary" title="Play melody">
+                        <span class="d-ico">&#9654;</span><span class="d-lbl">Play</span>
                     </button>
-                    <button id="play-btn" class="action-btn play-btn" title="Play melody">
-                        <span class="btn-icon">&#9654;</span>
-                        <span class="btn-label">Play Melody</span>
+                    <button id="harmony-btn" class="dock-btn" title="Harmony: all plants sing together in tune">
+                        <span class="d-ico">&#9835;</span><span class="d-lbl">Harmony</span>
                     </button>
-                    <button id="chaos-btn" class="action-btn chaos-btn" title="Chaos choir: everyone sings at once!">
-                        <span class="btn-icon">&#129315;</span>
-                        <span class="btn-label">Chaos!</span>
+                    <button id="chaos-btn" class="dock-btn warn" title="Chaos choir">
+                        <span class="d-ico">&#129315;</span><span class="d-lbl">Chaos</span>
                     </button>
-                    <button id="clear-btn" class="action-btn clear-btn" title="Clear all plants">
-                        <span class="btn-icon">&#128465;</span>
-                        <span class="btn-label">Clear All</span>
+                    <button id="clear-btn" class="dock-btn ghost" title="Clear garden">
+                        <span class="d-ico">&#128465;</span><span class="d-lbl">Clear</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Help Modal -->
+        <!-- Help modal -->
         <div id="help-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2>How to Play</h2>
-                <div class="help-section">
-                    <span class="help-icon">&#127793;</span>
-                    <h3>Plant</h3>
-                    <p>Choose a plant from the bottom menu, then click an empty plot to plant it.</p>
+            <div class="modal-content aurora-card">
+                <h2>Welcome to Aurora Bloom</h2>
+                <div class="help-grid">
+                    <div class="help-item"><span class="h-ico">&#127793;</span><div><h4>Plant</h4><p>Pick a glowing seed from the dock, then tap an empty plot. Plants grow from seed to sprout to bloom.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#127926;</span><div><h4>Sing</h4><p>Tap a blooming plant to hear its voice. Each species sings a different syllable.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#128167;</span><div><h4>Water</h4><p>Switch to Water mode and tap a plant. Watered plants sing richer harmonies.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#9997;</span><div><h4>Conduct</h4><p>Switch to Conduct mode, then drag across plants to make them sing in sequence — your own melody.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#127769;</span><div><h4>Day / Night</h4><p>Toggle the sky. Night makes the garden glow brighter and adds an ambient pad.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#9835;</span><div><h4>Harmony &amp; Chaos</h4><p>Harmony sings everyone in tune; Chaos lets everyone improvise at once.</p></div></div>
                 </div>
-                <div class="help-section">
-                    <span class="help-icon">&#127925;</span>
-                    <h3>Sing</h3>
-                    <p>Click a planted flower to make it sing! Each plant has its own unique voice.</p>
-                </div>
-                <div class="help-section">
-                    <span class="help-icon">&#128167;</span>
-                    <h3>Water</h3>
-                    <p>Toggle Water mode, then click a plant to water it. Watering changes how it sounds!</p>
-                </div>
-                <div class="help-section">
-                    <span class="help-icon">&#127932;</span>
-                    <h3>Melody</h3>
-                    <p>Plant different flowers and press Play Melody to hear them sing together!</p>
-                </div>
-                <div class="help-section">
-                    <span class="help-icon">&#129315;</span>
-                    <h3>Chaos!</h3>
-                    <p>Every plant sings at once in a gloriously absurd choir. Nobody is in tune. That's the point.</p>
-                </div>
-                <button id="close-help-btn" class="big-btn">Got it!</button>
+                <button id="close-help-btn" class="big-btn">Let's bloom</button>
             </div>
         </div>
 
-        <!-- Effects Canvas -->
         <canvas id="effects-canvas"></canvas>
     </div>
 
-    <script src="js/audio.js?v=8"></script>
-    <script src="js/plants.js?v=8"></script>
-    <script src="js/effects.js?v=8"></script>
-    <script src="js/game.js?v=8"></script>
+    <script src="js/audio.js?v=9"></script>
+    <script src="js/plants.js?v=9"></script>
+    <script src="js/effects.js?v=9"></script>
+    <script src="js/game.js?v=9"></script>
 </body>
 </html>
