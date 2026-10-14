@@ -1,668 +1,349 @@
-/* ============================================
-   SINGING GARDEN - Premium Audio Engine
-   Web Audio API synthesizer with:
-   - Layered harmonics for richer timbres
-   - Arpeggio sequencer for earworm melodies
-   - Chord pad layer
-   - Multi-tap delay + convolution reverb
-   ============================================ */
+/* ============================================================
+   SINGING GARDEN v9 — AUDIO ENGINE
+   Web Audio synthesis: formant vowel singing, ambient pad,
+   watered harmonies, silly SFX, conduct-mode melody
+   ============================================================ */
 
-/* ---- Vowel formant table (F1, F2, F3 in Hz) ---- */
-var VOWEL_FORMANTS = {
-    ah: [700, 1220, 2600],
-    eh: [530, 1840, 2480],
-    ee: [270, 2290, 3010],
-    oh: [570, 840, 2410],
-    oo: [300, 870, 2240],
-    uh: [640, 1190, 2390]
+var VOICE_FORMANTS = {
+    airy:    { vowels: [{f:800,q:8},{f:1200,q:6},{f:2500,q:4}], gain: 0.18 },
+    warm:    { vowels: [{f:500,q:10},{f:900,q:7},{f:2300,q:5}], gain: 0.22 },
+    bright:  { vowels: [{f:700,q:6},{f:1500,q:5},{f:3000,q:4}], gain: 0.16 },
+    crystal: { vowels: [{f:1000,q:4},{f:2000,q:3},{f:3500,q:3}], gain: 0.14 },
+    smooth:  { vowels: [{f:600,q:9},{f:1100,q:6},{f:2400,q:5}], gain: 0.20 },
+    mellow:  { vowels: [{f:550,q:10},{f:1000,q:7},{f:2200,q:5}], gain: 0.21 },
+    deep:    { vowels: [{f:350,q:12},{f:700,q:9},{f:1800,q:6}], gain: 0.24 }
 };
 
-/* ---- Signature humanoid voice per plant (absurd choir characters) ---- */
-var VOICES = {
-    hum:       { syllables: ['Mm', 'Hmm', 'Doo'], vowels: ['oo'], wave: 'sine', scoop: 0.05, vibrato: { rate: 4.5, depth: 6, delay: 0.25 }, breath: 0.02, dur: 0.3, reverb: 0.4, volume: 0.18 },
-    sunflare:  { syllables: ['Ah', 'Lah', 'Hah', 'Wah'], vowels: ['oh', 'ah'], wave: 'sawtooth', scoop: 0.12, vibrato: { rate: 5.5, depth: 14, delay: 0.18 }, breath: 0.04, dur: 0.4, octaveEnd: true, reverb: 0.45, volume: 0.24 },
-    toadstool: { syllables: ['Doo', 'Boo', 'Dum', 'Brr'], vowels: ['oo', 'oh'], wave: 'sawtooth', pitch: 0.5, scoop: 0.04, vibrato: { rate: 4, depth: 3, delay: 0.35 }, growl: 0.8, dur: 0.3, reverb: 0.35, delay: 0.12, volume: 0.3 },
-    bluebelle: { syllables: ['Loo', 'Oo', 'Lah'], vowels: ['oo'], wave: 'triangle', scoop: 0.06, vibrato: { rate: 4.8, depth: 10, delay: 0.25 }, breath: 0.06, dur: 0.45, reverb: 0.55, volume: 0.2 },
-    prickle:   { syllables: ['Nye', 'Nye', 'Ee'], vowels: ['ee', 'eh'], wave: 'sawtooth', q: 14, scoop: 0.03, vibrato: { rate: 6.5, depth: 6, delay: 0.1 }, breath: 0.02, dur: 0.3, reverb: 0.25, volume: 0.18 },
-    fernella:  { syllables: ['Hah', 'Fah', 'Hoo'], vowels: ['ah', 'uh'], wave: 'triangle', scoop: 0.05, vibrato: { rate: 5, depth: 8, delay: 0.3 }, breath: 0.16, dur: 0.38, reverb: 0.4, volume: 0.2 },
-    lumi:      { syllables: ['Ooo', 'Woo', 'Ahh'], vowels: ['oo', 'ah'], wave: 'sine', scoop: 0.18, vibrato: { rate: 4.2, depth: 12, delay: 0.4 }, breath: 0.05, dur: 0.5, slide: true, reverb: 0.6, volume: 0.2 },
-    crysto:    { syllables: ['Tee', 'Din', 'Eee'], vowels: ['ee'], wave: 'sine', pitch: 2, q: 15, scoop: 0.02, vibrato: { rate: 7, depth: 5, delay: 0.08 }, breath: 0.03, dur: 0.4, reverb: 0.5, delay: 0.2, volume: 0.14 },
-    pip:       { syllables: ['Dee', 'Doo', 'Bee'], vowels: ['ee', 'eh'], wave: 'square', pitch: 2.5, scoop: 0.05, vibrato: { rate: 8, depth: 4, delay: 0.05 }, dur: 0.16, stutter: true, reverb: 0.2, delay: 0.15, volume: 0.12 },
-    bublo:     { syllables: ['Wob', 'Bul', 'Woh'], vowels: ['oh', 'oo'], wave: 'triangle', scoop: 0.1, vibrato: { rate: 11, depth: 30, delay: 0.02 }, dur: 0.3, reverb: 0.3, delay: 0.18, volume: 0.2 },
-    drago:     { syllables: ['Rawr', 'Groh', 'Hmm'], vowels: ['oh', 'ah'], wave: 'sawtooth', pitch: 0.45, scoop: 0.15, vibrato: { rate: 3.5, depth: 8, delay: 0.3 }, growl: 1, dur: 0.5, reverb: 0.4, volume: 0.3 },
-    flama:     { syllables: ['Fyah', 'Bah', 'Dah'], vowels: ['ah'], wave: 'sawtooth', scoop: 0.09, vibrato: { rate: 6, depth: 9, delay: 0.15 }, growl: 0.3, dur: 0.28, reverb: 0.3, delay: 0.22, volume: 0.2 },
-    shimmer:   { syllables: ['Ding', 'Dah', 'Doo'], vowels: ['ee', 'oh'], wave: 'triangle', scoop: 0.03, vibrato: { rate: 5, depth: 6, delay: 0.2 }, dur: 0.35, reverb: 0.5, delay: 0.25, volume: 0.18 },
-    puffer:    { syllables: ['Brr', 'Pff', 'Frr'], vowels: ['uh'], wave: 'triangle', scoop: 0.06, vibrato: { rate: 9, depth: 18, delay: 0.05 }, breath: 0.08, dur: 0.22, stutter: true, reverb: 0.25, volume: 0.18 },
-    vinio:     { syllables: ['Whe', 'Eee', 'Loo'], vowels: ['oo', 'ee'], wave: 'sine', scoop: 0.3, dur: 0.4, slide: true, reverb: 0.35, delay: 0.15, volume: 0.2 },
-    echo:      { syllables: ['Eho', 'Hal', 'Lah'], vowels: ['ah'], wave: 'triangle', scoop: 0.07, vibrato: { rate: 4.5, depth: 10, delay: 0.3 }, dur: 0.4, reverb: 0.65, delay: 0.5, volume: 0.2 },
-    twinkle:   { syllables: ['Yo', 'Lay', 'Ee', 'Oh'], vowels: ['oh', 'ee'], wave: 'triangle', scoop: 0.08, vibrato: { rate: 5, depth: 8, delay: 0.2 }, dur: 0.3, octaveHop: true, reverb: 0.4, volume: 0.2 }
-};
+var SYLLABLES = ['La', 'Lu', 'Li', 'Lo', 'Le', 'Ma', 'Na', 'Da', 'Ba', 'Ya'];
 
 class AudioEngine {
     constructor() {
         this.ctx = null;
-        this.masterGain = null;
-        this.compressor = null;
-        this.reverbNode = null;
-        this.reverbGain = null;
-        this.delayNode = null;
-        this.delayGain = null;
-        this.delayFeedback = null;
-        this.chorusNode = null;
-        this.chorusGain = null;
+        this.master = null;
         this.muted = false;
-        this.initialized = false;
-        this._arpTimer = null;
+        this.padNodes = [];
+        this.padGain = null;
+        this.padPlaying = false;
     }
 
-    /* Initialize after first user gesture */
     init() {
-        if (this.initialized) return;
-        try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-            /* Compressor for glue + limiting */
-            this.compressor = this.ctx.createDynamicsCompressor();
-            this.compressor.threshold.value = -12;
-            this.compressor.knee.value = 10;
-            this.compressor.ratio.value = 4;
-            this.compressor.attack.value = 0.003;
-            this.compressor.release.value = 0.25;
-
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.45;
-
-            this.compressor.connect(this.masterGain);
-            this.masterGain.connect(this.ctx.destination);
-
-            /* Reverb: longer, denser impulse */
-            this.reverbNode = this.ctx.createConvolver();
-            this.reverbNode.buffer = this._createImpulseResponse(2.8, 2.2, true);
-            this.reverbGain = this.ctx.createGain();
-            this.reverbGain.gain.value = 0.85;
-            this.reverbNode.connect(this.reverbGain);
-            this.reverbGain.connect(this.compressor);
-
-            /* Multi-tap delay (stereo spread) */
-            this.delayNode = this.ctx.createDelay(1.5);
-            this.delayNode.delayTime.value = 0.32;
-            this.delayGain = this.ctx.createGain();
-            this.delayGain.gain.value = 0.55;
-            this.delayFeedback = this.ctx.createGain();
-            this.delayFeedback.gain.value = 0.42;
-            this.delayNode.connect(this.delayGain);
-            this.delayNode.connect(this.delayFeedback);
-            this.delayFeedback.connect(this.delayNode);
-            this.delayGain.connect(this.compressor);
-
-            /* Chorus: subtle modulation for movement */
-            this.chorusNode = this.ctx.createDelay(0.05);
-            this.chorusNode.delayTime.value = 0.025;
-            this.chorusGain = this.ctx.createGain();
-            this.chorusGain.gain.value = 0.35;
-            this.chorusNode.connect(this.chorusGain);
-            this.chorusGain.connect(this.compressor);
-            var chorusLfo = this.ctx.createOscillator();
-            var chorusLfoGain = this.ctx.createGain();
-            chorusLfo.frequency.value = 0.6;
-            chorusLfoGain.gain.value = 0.005;
-            chorusLfo.connect(chorusLfoGain);
-            chorusLfoGain.connect(this.chorusNode.delayTime);
-            chorusLfo.start();
-
-            this.initialized = true;
-        } catch (e) {
-            console.warn('AudioEngine init failed:', e);
-        }
+        if (this.ctx) return;
+        var AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.8;
+        this.master.connect(this.ctx.destination);
     }
 
     resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     }
 
-    /* Generate reverb impulse with optional stereo decorrelation */
-    _createImpulseResponse(duration, decay, stereo) {
-        var sampleRate = this.ctx.sampleRate;
-        var length = Math.max(1, Math.floor(sampleRate * duration));
-        var impulse = this.ctx.createBuffer(2, length, sampleRate);
-        for (var ch = 0; ch < 2; ch++) {
-            var data = impulse.getChannelData(ch);
-            var offset = stereo ? (ch === 0 ? 0 : 19) : 0;
-            for (var i = 0; i < length; i++) {
-                var env = Math.pow(1 - i / length, decay);
-                var noise = (Math.sin(i * 0.5 + offset) + (Math.random() * 2 - 1) * 0.5);
-                data[i] = noise * env * 0.5;
-            }
-        }
-        return impulse;
+    setMuted(m) {
+        this.muted = m;
+        if (this.master) this.master.gain.value = m ? 0 : 0.8;
     }
 
-    /* Play a note with layered harmonics and effects
-     * audioConfig: plant's audio config
-     * waterLevel: 0-3
-     * specificFreq: optional override
-     */
-    playNote(audioConfig, waterLevel, specificFreq) {
-        if (!this.initialized || this.muted) return;
-        if (!audioConfig || !audioConfig.waterEffects) return;
-        if (!specificFreq && !audioConfig.notes) return;
+    now() { return this.ctx ? this.ctx.currentTime : 0; }
 
-        var wl = Math.max(0, Math.min(waterLevel, 3));
-        var water = audioConfig.waterEffects[wl];
-        var baseFreq = specificFreq || audioConfig.notes[0];
-        var freq = baseFreq * water.pitchMultiplier;
-
-        var now = this.ctx.currentTime;
-        var env = audioConfig.envelope;
-        var vol = audioConfig.volume || 0.22;
-        var dur = audioConfig.noteDuration || 0.4;
-        var totalDur = env.attack + env.decay + dur + env.release;
-
-        /* Main oscillator */
-        var mainOsc = this.ctx.createOscillator();
-        mainOsc.type = audioConfig.waveform;
-        mainOsc.frequency.value = freq;
-
-        /* Layered harmonics (sub-oscillators at integer multiples) */
-        var harmonics = audioConfig.harmonics || [1];
-        var harmonicGainNodes = [];
-        var fundGain = this.ctx.createGain();
-        fundGain.gain.value = 1.0;
-        mainOsc.connect(fundGain);
-
-        var harmonicOscs = [];
-        for (var h = 1; h < harmonics.length; h++) {
-            var mult = h + 1;
-            var harmOsc = this.ctx.createOscillator();
-            harmOsc.type = audioConfig.waveform;
-            harmOsc.frequency.value = freq * mult;
-            var harmG = this.ctx.createGain();
-            harmG.gain.value = harmonics[h] * (1 + water.harmonicBoost * 0.15);
-            harmOsc.connect(harmG);
-            harmG.connect(fundGain);
-            harmonicOscs.push(harmOsc);
-        }
-
-        /* Filter */
-        var filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = (audioConfig.filterFreq || 3000) + water.harmonicBoost * 1500;
-        filter.Q.value = audioConfig.filterQ || 1;
-
-        /* Amplitude envelope */
-        var amp = this.ctx.createGain();
-        amp.gain.setValueAtTime(0, now);
-        amp.gain.linearRampToValueAtTime(vol, now + env.attack);
-        amp.gain.linearRampToValueAtTime(vol * env.sustain, now + env.attack + env.decay);
-        amp.gain.setValueAtTime(vol * env.sustain, now + env.attack + env.decay + dur);
-        amp.gain.linearRampToValueAtTime(0, now + totalDur);
-
-        fundGain.connect(filter);
-        filter.connect(amp);
-
-        /* Dry signal */
-        amp.connect(this.compressor);
-
-        /* Reverb send */
-        var reverbAmt = (audioConfig.reverb || 0) + water.reverbBoost;
-        if (reverbAmt > 0) {
-            var reverbSend = this.ctx.createGain();
-            reverbSend.gain.value = Math.min(reverbAmt, 0.85);
-            amp.connect(reverbSend);
-            reverbSend.connect(this.reverbNode);
-        }
-
-        /* Delay send */
-        var delayAmt = (audioConfig.delay || 0) + (water.delayBoost || 0);
-        if (delayAmt > 0) {
-            var delaySend = this.ctx.createGain();
-            delaySend.gain.value = Math.min(delayAmt, 0.7);
-            amp.connect(delaySend);
-            delaySend.connect(this.delayNode);
-        }
-
-        /* Chorus send */
-        var chorusSend = this.ctx.createGain();
-        chorusSend.gain.value = 0.4;
-        amp.connect(chorusSend);
-        chorusSend.connect(this.chorusNode);
-
-        /* Vibrato (LFO on pitch) */
-        if (water.vibrato > 0) {
-            var lfo = this.ctx.createOscillator();
-            var lfoGain = this.ctx.createGain();
-            lfo.frequency.value = 5.2;
-            lfoGain.gain.value = water.vibrato;
-            lfo.connect(lfoGain);
-            lfoGain.connect(mainOsc.frequency);
-            for (var k = 0; k < harmonicOscs.length; k++) {
-                lfoGain.connect(harmonicOscs[k].frequency);
-            }
-            lfo.start(now);
-            lfo.stop(now + totalDur + 0.1);
-        }
-
-        /* Start all oscillators */
-        mainOsc.start(now);
-        for (var m = 0; m < harmonicOscs.length; m++) {
-            harmonicOscs[m].start(now);
-            harmonicOscs[m].stop(now + totalDur + 0.1);
-        }
-        mainOsc.stop(now + totalDur + 0.1);
-    }
-
-    /* Play an arpeggio sequence (catchy earworm layer) */
-    playArpeggio(audioConfig, waterLevel, notes) {
-        if (!this.initialized || this.muted) return;
-        var self = this;
-        var seq = notes || audioConfig.notes;
-        var stepMs = 110;
-        for (var i = 0; i < seq.length; i++) {
-            (function(idx) {
-                setTimeout(function() {
-                    self.playNote(audioConfig, waterLevel, seq[idx]);
-                }, idx * stepMs);
-            })(i);
-        }
-    }
-
-    /* Play a chord (all notes simultaneously) */
-    playChord(audioConfig, waterLevel, notes) {
-        if (!this.initialized || this.muted) return;
-        var seq = notes || audioConfig.notes;
-        for (var i = 0; i < seq.length; i++) {
-            this.playNote(audioConfig, waterLevel, seq[i]);
-        }
-    }
-
-    /* ============================================
-       HUMANOID VOICE SYNTH (formant singing)
-       Each plant sings nonsense syllables with
-       vowel formants, pitch scoops, delayed
-       vibrato, breath noise and a signature quirk.
-       ============================================ */
-
-    _noiseBuffer() {
-        if (!this._noiseBuf) {
-            var len = this.ctx.sampleRate;
-            this._noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-            var d = this._noiseBuf.getChannelData(0);
-            for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-        }
-        return this._noiseBuf;
-    }
-
-    /* Sing ONE syllable. Returns the syllable text for visuals. */
-    playVoice(voiceId, freq, waterLevel, delayMs, opts) {
-        if (!this.initialized || this.muted) return null;
-        var voice = VOICES[voiceId] || VOICES.hum;
+    /* ---------- Formant vowel singing ---------- */
+    singPhrase(plantId, notes, waterLevel, opts) {
+        if (!this.ctx) return [];
         opts = opts || {};
-        var wl = Math.max(0, Math.min(waterLevel || 0, 3));
-        var vol = (opts.volume !== undefined ? opts.volume : 1) * (voice.volume || 0.2);
-        var now = this.ctx.currentTime + (delayMs || 0) / 1000;
-        var dur = opts.dur || voice.dur || 0.32;
-        var target = freq * (voice.pitch || 1);
-        if (opts.transpose) target *= Math.pow(2, opts.transpose / 12);
-        if (voice.octaveHop && !opts.noStutter) target *= Math.random() < 0.5 ? 2 : 1;
-
-        /* Glottal source with a human pitch scoop */
-        var osc = this.ctx.createOscillator();
-        osc.type = voice.wave || 'sawtooth';
-        osc.frequency.setValueAtTime(target * (1 - (voice.scoop || 0.06)), now);
-        osc.frequency.exponentialRampToValueAtTime(target, now + 0.07);
-        if (opts.slideFrom) {
-            osc.frequency.cancelScheduledValues(now);
-            osc.frequency.setValueAtTime(opts.slideFrom, now);
-            osc.frequency.exponentialRampToValueAtTime(target, now + 0.14);
+        var voice = VOICE_FORMANTS[plantId] || VOICE_FORMANTS.airy;
+        /* Look up the plant's voice type from its audio config when possible */
+        var voiceType = 'airy';
+        if (typeof PLANT_TYPES !== 'undefined') {
+            var p = getPlantById(plantId);
+            if (p) voiceType = p.audio.voice || 'airy';
         }
-        if (voice.octaveEnd && opts.last) {
-            osc.frequency.setValueAtTime(target, now + dur * 0.5);
-            osc.frequency.exponentialRampToValueAtTime(target * 2, now + dur + 0.1);
-        }
+        voice = VOICE_FORMANTS[voiceType] || VOICE_FORMANTS.airy;
 
-        /* Delayed vibrato (humans don't vibrate instantly) */
-        var vibDepth = voice.vibrato ? voice.vibrato.depth + wl * 8 : 0;
-        if (vibDepth > 0) {
-            var lfo = this.ctx.createOscillator();
-            lfo.frequency.value = voice.vibrato.rate + wl * 0.4;
-            var lg = this.ctx.createGain();
-            lg.gain.setValueAtTime(0, now);
-            lg.gain.linearRampToValueAtTime(vibDepth, now + (voice.vibrato.delay || 0.2));
-            lfo.connect(lg);
-            lg.connect(osc.detune);
-            lfo.start(now);
-            lfo.stop(now + dur + 0.4);
-        }
+        var transpose = opts.transpose || 0;
+        var stepMs = opts.stepMs || 220;
+        var sylls = [];
+        var t0 = this.now() + 0.02;
 
-        /* Formant bank: glide vowel start -> end ("wah", "loo"...) */
-        var v0 = VOWEL_FORMANTS[voice.vowels[0]];
-        var v1 = VOWEL_FORMANTS[voice.vowels[voice.vowels.length - 1]];
-        var bus = this.ctx.createGain();
-        var fGains = [1, 0.5, 0.22];
-        for (var i = 0; i < 3; i++) {
-            var bp = this.ctx.createBiquadFilter();
+        for (var i = 0; i < notes.length; i++) {
+            var freq = notes[i] * Math.pow(2, transpose / 12);
+            var start = t0 + i * stepMs / 1000;
+            var dur = stepMs / 1000 * 0.9;
+            var text = SYLLABLES[(i + (waterLevel || 0)) % SYLLABLES.length];
+            this._singNote(freq, start, dur, voice, waterLevel);
+            sylls.push({ t: i * stepMs, text: text });
+        }
+        return sylls;
+    }
+
+    _singNote(freq, start, dur, voice, waterLevel) {
+        var ctx = this.ctx;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(voice.gain, start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+
+        /* carrier: sawtooth through formant filters */
+        var osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+
+        var filters = [];
+        var src = osc;
+        for (var f = 0; f < voice.vowels.length; f++) {
+            var bp = ctx.createBiquadFilter();
             bp.type = 'bandpass';
-            bp.Q.value = Math.max(4, (voice.q || 9) - i * 2);
-            bp.frequency.setValueAtTime(v0[i], now);
-            bp.frequency.exponentialRampToValueAtTime(v1[i] * (1 + wl * 0.03), now + 0.09);
-            var fg = this.ctx.createGain();
-            fg.gain.value = fGains[i];
-            osc.connect(bp);
-            bp.connect(fg);
-            fg.connect(bus);
-        }
-        /* Warm body under the formants */
-        var bodyF = this.ctx.createBiquadFilter();
-        bodyF.type = 'lowpass';
-        bodyF.frequency.value = 420 + wl * 120;
-        var bodyG = this.ctx.createGain();
-        bodyG.gain.value = 0.22;
-        osc.connect(bodyF);
-        bodyF.connect(bodyG);
-        bodyG.connect(bus);
-
-        /* Breath noise */
-        var bAmt = (voice.breath || 0) + wl * 0.02;
-        if (bAmt > 0.005) {
-            var noise = this.ctx.createBufferSource();
-            noise.buffer = this._noiseBuffer();
-            noise.loop = true;
-            var nf = this.ctx.createBiquadFilter();
-            nf.type = 'bandpass';
-            nf.frequency.value = 1700;
-            nf.Q.value = 0.7;
-            var ng = this.ctx.createGain();
-            ng.gain.setValueAtTime(0, now);
-            ng.gain.linearRampToValueAtTime(bAmt, now + 0.05);
-            ng.gain.linearRampToValueAtTime(0, now + dur);
-            noise.connect(nf);
-            nf.connect(ng);
-            ng.connect(bus);
-            noise.start(now);
-            noise.stop(now + dur + 0.1);
+            bp.frequency.value = voice.vowels[f].f;
+            bp.Q.value = voice.vowels[f].q;
+            src.connect(bp);
+            src = bp;
         }
 
-        /* Monster growl: sub square with AM wobble */
-        if (voice.growl) {
-            var sub = this.ctx.createOscillator();
-            sub.type = 'square';
-            sub.frequency.value = target / 2;
-            var sg = this.ctx.createGain();
-            sg.gain.value = voice.growl * 0.25;
-            var am = this.ctx.createOscillator();
-            am.frequency.value = 26;
-            var amg = this.ctx.createGain();
-            amg.gain.value = voice.growl * 0.12;
-            am.connect(amg);
-            amg.connect(sg.gain);
-            sub.connect(sg);
-            sg.connect(bus);
-            sub.start(now);
-            sub.stop(now + dur + 0.2);
-            am.start(now);
-            am.stop(now + dur + 0.2);
+        /* watered plants get a gentle vibrato + shimmer */
+        if (waterLevel && waterLevel >= 1) {
+            var lfo = ctx.createOscillator();
+            var lfoGain = ctx.createGain();
+            lfo.frequency.value = 5;
+            lfoGain.gain.value = waterLevel * 2;
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(start);
+            lfo.stop(start + dur + 0.05);
         }
 
-        /* Soft vocal envelope */
-        var env = this.ctx.createGain();
-        env.gain.setValueAtTime(0, now);
-        env.gain.linearRampToValueAtTime(vol, now + 0.045);
-        env.gain.setValueAtTime(vol, now + Math.max(0.05, dur * 0.55));
-        env.gain.linearRampToValueAtTime(0.0001, now + dur + 0.18);
-        bus.connect(env);
-
-        var dry = this.ctx.createGain();
-        dry.gain.value = 0.8;
-        env.connect(dry);
-        dry.connect(this.compressor);
-        var rv = voice.reverb !== undefined ? voice.reverb : 0.3;
-        if (rv > 0) {
-            var rs = this.ctx.createGain();
-            rs.gain.value = Math.min(rv, 0.85);
-            env.connect(rs);
-            rs.connect(this.reverbNode);
-        }
-        if (voice.delay) {
-            var ds = this.ctx.createGain();
-            ds.gain.value = Math.min(voice.delay, 0.6);
-            env.connect(ds);
-            ds.connect(this.delayNode);
-        }
-
-        osc.start(now);
-        osc.stop(now + dur + 0.3);
-
-        /* Stutter quirk: repeat the syllable quickly */
-        if (voice.stutter && !opts.noStutter && Math.random() < 0.5) {
-            this.playVoice(voiceId, freq, wl, (delayMs || 0) + dur * 900,
-                { dur: dur * 0.55, noStutter: true, volume: opts.volume });
-        }
-
-        var syls = voice.syllables;
-        return syls[Math.floor(Math.random() * syls.length)];
+        src.connect(g);
+        g.connect(this.master);
+        osc.start(start);
+        osc.stop(start + dur + 0.05);
     }
 
-    /* Sing a phrase of syllables; returns [{text, t, f}] for visuals.
-       Well-watered plants auto-harmonize (third), lush adds a fifth. */
-    singPhrase(voiceId, freqs, waterLevel, opts) {
-        if (!this.initialized || this.muted) return [];
-        opts = opts || {};
-        var wl = Math.max(0, Math.min(waterLevel || 0, 3));
-        var stepMs = opts.stepMs || 250;
-        var out = [];
-        var prev = null;
-        var self = this;
-        var voice = VOICES[voiceId] || VOICES.hum;
+    /* Single voice blip */
+    playVoice(plantId, freq, waterLevel, delayMs) {
+        if (!this.ctx) return;
+        var voiceType = 'airy';
+        if (typeof PLANT_TYPES !== 'undefined') {
+            var p = getPlantById(plantId);
+            if (p) voiceType = p.audio.voice || 'airy';
+        }
+        var voice = VOICE_FORMANTS[voiceType] || VOICE_FORMANTS.airy;
+        var start = this.now() + (delayMs || 0) / 1000;
+        this._singNote(freq, start, 0.3, voice, waterLevel);
+    }
+
+    /* ---------- Ambient pad (night mode) ---------- */
+    startPad() {
+        if (!this.ctx || this.padPlaying) return;
+        this.padPlaying = true;
+        this.padGain = this.ctx.createGain();
+        this.padGain.gain.value = 0;
+        this.padGain.gain.linearRampToValueAtTime(0.08, this.now() + 1.5);
+        this.padGain.connect(this.master);
+
+        var freqs = [130.81, 196.00, 261.63];
         for (var i = 0; i < freqs.length; i++) {
-            (function(idx) {
-                var t = idx * stepMs;
-                var f = freqs[idx];
-                var o = {};
-                if (prev && voice.slide) o.slideFrom = prev;
-                if (opts.transpose) o.transpose = opts.transpose;
-                if (idx === freqs.length - 1) o.last = true;
-                var text = self.playVoice(voiceId, f, wl, t, o);
-                out.push({ text: text, t: t, f: f });
-                if (wl >= 2) {
-                    self.playVoice(voiceId, f * 1.26, wl, t, { volume: 0.4, noStutter: true });
-                }
-                if (wl >= 3) {
-                    self.playVoice(voiceId, f * 1.498, wl, t + 120, { volume: 0.28, noStutter: true });
-                }
-                prev = f * (voice.pitch || 1);
-            })(i);
+            var osc = this.ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freqs[i];
+            var lp = this.ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.value = 600;
+            var g = this.ctx.createGain();
+            g.gain.value = 0.33;
+            /* slow detune drift */
+            var lfo = this.ctx.createOscillator();
+            var lfoG = this.ctx.createGain();
+            lfo.frequency.value = 0.1 + i * 0.07;
+            lfoG.gain.value = 3;
+            lfo.connect(lfoG);
+            lfoG.connect(osc.frequency);
+            osc.connect(lp);
+            lp.connect(g);
+            g.connect(this.padGain);
+            osc.start();
+            lfo.start();
+            this.padNodes.push(osc, lfo);
         }
-        return out;
     }
 
-    /* ============================================
-       HUMANOID REACTION SFX - absurd little noises
-       Giggles, yawns, hiccups, burps, snores,
-       splats, boings and raspberries. All synth.
-       ============================================ */
+    stopPad() {
+        if (!this.padPlaying) return;
+        this.padPlaying = false;
+        var self = this;
+        if (this.padGain) {
+            this.padGain.gain.cancelScheduledValues(this.now());
+            this.padGain.gain.setValueAtTime(this.padGain.gain.value, this.now());
+            this.padGain.gain.linearRampToValueAtTime(0, this.now() + 1.2);
+        }
+        setTimeout(function() {
+            for (var i = 0; i < self.padNodes.length; i++) {
+                try { self.padNodes[i].stop(); } catch (e) {}
+            }
+            self.padNodes = [];
+            self.padGain = null;
+        }, 1400);
+    }
 
-    /* Giggle: "hee-hee-hee" quick rising vocal blips */
+    /* ---------- Silly SFX ---------- */
     playGiggle(freq) {
-        if (!this.initialized || this.muted) return;
-        var f = freq || 520;
-        for (var i = 0; i < 3; i++) {
-            this.playVoice('pip', f * (1 + i * 0.14), 0, i * 105,
-                { dur: 0.09, noStutter: true, volume: 0.85 });
+        if (!this.ctx) return;
+        var base = freq || 520;
+        var t = this.now();
+        for (var i = 0; i < 4; i++) {
+            var osc = this.ctx.createOscillator();
+            var g = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(base + i * 60, t + i * 0.07);
+            osc.frequency.exponentialRampToValueAtTime(base + i * 60 + 120, t + i * 0.07 + 0.06);
+            g.gain.setValueAtTime(0, t + i * 0.07);
+            g.gain.linearRampToValueAtTime(0.12, t + i * 0.07 + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.08);
+            osc.connect(g); g.connect(this.master);
+            osc.start(t + i * 0.07);
+            osc.stop(t + i * 0.07 + 0.1);
         }
     }
 
-    /* Yawn: long descending "haaaww... mmm" */
     playYawn() {
-        if (!this.initialized || this.muted) return;
-        this.playVoice('lumi', 200, 0, 0, { slideFrom: 430, dur: 0.75, volume: 0.9 });
-        this.playVoice('hum', 105, 0, 620, { dur: 0.55, volume: 0.7 });
+        if (!this.ctx) return;
+        var t = this.now();
+        var osc = this.ctx.createOscillator();
+        var g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, t);
+        osc.frequency.exponentialRampToValueAtTime(180, t + 0.5);
+        osc.frequency.exponentialRampToValueAtTime(120, t + 0.9);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.15, t + 0.15);
+        g.gain.linearRampToValueAtTime(0.1, t + 0.6);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
+        osc.connect(g); g.connect(this.master);
+        osc.start(t); osc.stop(t + 1);
     }
 
-    /* Hiccup: tiny squeaky "hic!" */
     playHiccup() {
-        if (!this.initialized || this.muted) return;
-        this.playVoice('pip', 640, 0, 0, { dur: 0.055, noStutter: true, transpose: 5, volume: 0.9 });
-    }
-
-    /* Snore: inhale hiss + low rumbling exhale (one cycle) */
-    playSnore() {
-        if (!this.initialized || this.muted) return;
-        var now = this.ctx.currentTime;
-        /* Inhale: bandpassed noise rising */
-        var noise = this.ctx.createBufferSource();
-        noise.buffer = this._noiseBuffer();
-        var nf = this.ctx.createBiquadFilter();
-        nf.type = 'bandpass';
-        nf.frequency.setValueAtTime(500, now);
-        nf.frequency.exponentialRampToValueAtTime(1300, now + 0.5);
-        nf.Q.value = 2;
-        var ng = this.ctx.createGain();
-        ng.gain.setValueAtTime(0, now);
-        ng.gain.linearRampToValueAtTime(0.05, now + 0.28);
-        ng.gain.linearRampToValueAtTime(0, now + 0.55);
-        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
-        noise.start(now); noise.stop(now + 0.6);
-        /* Exhale: low saw rumble with wobble */
-        var osc = this.ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(62, now + 0.55);
-        osc.frequency.exponentialRampToValueAtTime(46, now + 1.15);
-        var lp = this.ctx.createBiquadFilter();
-        lp.type = 'lowpass'; lp.frequency.value = 220;
-        var am = this.ctx.createOscillator();
-        am.frequency.value = 14;
-        var amg = this.ctx.createGain(); amg.gain.value = 0.035;
-        var og = this.ctx.createGain();
-        og.gain.setValueAtTime(0, now + 0.55);
-        og.gain.linearRampToValueAtTime(0.09, now + 0.7);
-        og.gain.linearRampToValueAtTime(0, now + 1.2);
-        am.connect(amg); amg.connect(og.gain);
-        osc.connect(lp); lp.connect(og); og.connect(this.compressor);
-        var rs = this.ctx.createGain(); rs.gain.value = 0.3;
-        og.connect(rs); rs.connect(this.reverbNode);
-        osc.start(now + 0.55); osc.stop(now + 1.25);
-        am.start(now + 0.55); am.stop(now + 1.25);
-    }
-
-    /* Burp: low square with AM flutter + gurgle noise */
-    playBurp() {
-        if (!this.initialized || this.muted) return;
-        var now = this.ctx.currentTime;
-        var osc = this.ctx.createOscillator();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(95, now);
-        osc.frequency.exponentialRampToValueAtTime(55, now + 0.26);
-        var am = this.ctx.createOscillator();
-        am.type = 'square'; am.frequency.value = 27;
-        var amg = this.ctx.createGain(); amg.gain.value = 0.5;
-        var g = this.ctx.createGain();
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(0.16, now + 0.03);
-        g.gain.setValueAtTime(0.16, now + 0.18);
-        g.gain.linearRampToValueAtTime(0, now + 0.3);
-        am.connect(amg); amg.connect(g.gain);
-        var lp = this.ctx.createBiquadFilter();
-        lp.type = 'lowpass'; lp.frequency.value = 500;
-        osc.connect(lp); lp.connect(g); g.connect(this.compressor);
-        var rs = this.ctx.createGain(); rs.gain.value = 0.35;
-        g.connect(rs); rs.connect(this.reverbNode);
-        osc.start(now); osc.stop(now + 0.32);
-        am.start(now); am.stop(now + 0.32);
-    }
-
-    /* Splat: wet plop (noise thump + pitch drop) */
-    playSplat() {
-        if (!this.initialized || this.muted) return;
-        var now = this.ctx.currentTime;
-        var noise = this.ctx.createBufferSource();
-        noise.buffer = this._noiseBuffer();
-        var nf = this.ctx.createBiquadFilter();
-        nf.type = 'lowpass';
-        nf.frequency.setValueAtTime(900, now);
-        nf.frequency.exponentialRampToValueAtTime(140, now + 0.16);
-        var ng = this.ctx.createGain();
-        ng.gain.setValueAtTime(0.22, now);
-        ng.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
-        noise.start(now); noise.stop(now + 0.2);
-        var osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(130, now);
-        osc.frequency.exponentialRampToValueAtTime(48, now + 0.15);
-        var og = this.ctx.createGain();
-        og.gain.setValueAtTime(0.18, now);
-        og.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-        osc.connect(og); og.connect(this.compressor);
-        osc.start(now); osc.stop(now + 0.18);
-    }
-
-    /* Boing: springy pitch-wobbled sine */
-    playBoing() {
-        if (!this.initialized || this.muted) return;
-        var now = this.ctx.currentTime;
-        var osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(320, now + 0.4);
-        var lfo = this.ctx.createOscillator();
-        lfo.frequency.value = 11;
-        var lg = this.ctx.createGain();
-        lg.gain.setValueAtTime(60, now);
-        lg.gain.exponentialRampToValueAtTime(0.5, now + 0.45);
-        lfo.connect(lg); lg.connect(osc.frequency);
-        var g = this.ctx.createGain();
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(0.14, now + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-        osc.connect(g); g.connect(this.compressor);
-        var ds = this.ctx.createGain(); ds.gain.value = 0.25;
-        g.connect(ds); ds.connect(this.delayNode);
-        osc.start(now); osc.stop(now + 0.52);
-        lfo.start(now); lfo.stop(now + 0.52);
-    }
-
-    /* Raspberry: "pbtbtbt" flutter-tongue Bronx cheer */
-    playRaspberry() {
-        if (!this.initialized || this.muted) return;
-        var now = this.ctx.currentTime;
-        var osc = this.ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(90, now + 0.34);
-        var am = this.ctx.createOscillator();
-        am.type = 'square'; am.frequency.value = 34;
-        var amg = this.ctx.createGain(); amg.gain.value = 0.5;
-        var lp = this.ctx.createBiquadFilter();
-        lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 2;
-        var g = this.ctx.createGain();
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(0.13, now + 0.03);
-        g.gain.setValueAtTime(0.13, now + 0.26);
-        g.gain.linearRampToValueAtTime(0, now + 0.38);
-        am.connect(amg); amg.connect(g.gain);
-        osc.connect(lp); lp.connect(g); g.connect(this.compressor);
-        /* breathy spit noise */
-        var noise = this.ctx.createBufferSource();
-        noise.buffer = this._noiseBuffer();
-        var nf = this.ctx.createBiquadFilter();
-        nf.type = 'bandpass'; nf.frequency.value = 1100; nf.Q.value = 0.6;
-        var ng = this.ctx.createGain();
-        ng.gain.setValueAtTime(0.05, now);
-        ng.gain.linearRampToValueAtTime(0, now + 0.35);
-        noise.connect(nf); nf.connect(ng); ng.connect(this.compressor);
-        osc.start(now); osc.stop(now + 0.4);
-        am.start(now); am.stop(now + 0.4);
-        noise.start(now); noise.stop(now + 0.4);
-    }
-
-    setMuted(muted) {
-        this.muted = muted;
-        if (this.masterGain) {
-            var now = this.ctx.currentTime;
-            this.masterGain.gain.cancelScheduledValues(now);
-            this.masterGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, now + 0.1);
+        if (!this.ctx) return;
+        var t = this.now();
+        for (var i = 0; i < 2; i++) {
+            var osc = this.ctx.createOscillator();
+            var g = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(180, t + i * 0.18);
+            osc.frequency.exponentialRampToValueAtTime(90, t + i * 0.18 + 0.08);
+            g.gain.setValueAtTime(0, t + i * 0.18);
+            g.gain.linearRampToValueAtTime(0.1, t + i * 0.18 + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.18 + 0.1);
+            osc.connect(g); g.connect(this.master);
+            osc.start(t + i * 0.18); osc.stop(t + i * 0.18 + 0.12);
         }
+    }
+
+    playBurp() {
+        if (!this.ctx) return;
+        var t = this.now();
+        var osc = this.ctx.createOscillator();
+        var g = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, t);
+        osc.frequency.exponentialRampToValueAtTime(60, t + 0.4);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.18, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        osc.connect(g); g.connect(this.master);
+        osc.start(t); osc.stop(t + 0.5);
+    }
+
+    playSnore() {
+        if (!this.ctx) return;
+        var t = this.now();
+        var osc = this.ctx.createOscillator();
+        var g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(80, t);
+        osc.frequency.linearRampToValueAtTime(110, t + 0.3);
+        osc.frequency.linearRampToValueAtTime(70, t + 0.6);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.15);
+        g.gain.linearRampToValueAtTime(0.08, t + 0.4);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+        osc.connect(g); g.connect(this.master);
+        osc.start(t); osc.stop(t + 0.7);
+    }
+
+    playSplat() {
+        if (!this.ctx) return;
+        var t = this.now();
+        var buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.2, this.ctx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+        }
+        var src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+        var g = this.ctx.createGain();
+        g.gain.value = 0.15;
+        var lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 800;
+        src.connect(lp); lp.connect(g); g.connect(this.master);
+        src.start(t);
+    }
+
+    playBoing() {
+        if (!this.ctx) return;
+        var t = this.now();
+        var osc = this.ctx.createOscillator();
+        var g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(150, t + 0.3);
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        osc.connect(g); g.connect(this.master);
+        osc.start(t); osc.stop(t + 0.4);
+    }
+
+    playRaspberry() {
+        if (!this.ctx) return;
+        var t = this.now();
+        var buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.4, this.ctx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < data.length; i++) {
+            data[i] = Math.sin(i * 0.05) * Math.pow(1 - i / data.length, 1.5) * (Math.random() * 0.3 + 0.7);
+        }
+        var src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+        var g = this.ctx.createGain();
+        g.gain.value = 0.12;
+        var bp = this.ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 400;
+        bp.Q.value = 2;
+        src.connect(bp); bp.connect(g); g.connect(this.master);
+        src.start(t);
+    }
+
+    /* Sparkle for planting */
+    playSparkle() {
+        if (!this.ctx) return;
+        var t = this.now();
+        for (var i = 0; i < 3; i++) {
+            var osc = this.ctx.createOscillator();
+            var g = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880 + i * 440;
+            g.gain.setValueAtTime(0, t + i * 0.04);
+            g.gain.linearRampToValueAtTime(0.08, t + i * 0.04 + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.04 + 0.25);
+            osc.connect(g); g.connect(this.master);
+            osc.start(t + i * 0.04); osc.stop(t + i * 0.04 + 0.3);
+        }
+    }
+
+    /* Welcome hum */
+    playWelcome() {
+        if (!this.ctx) return;
+        this.singPhrase('luna', [261.63, 329.63, 392.00, 523.25], 1, { stepMs: 190 });
     }
 }
+
+if (typeof window !== 'undefined') window.AudioEngine = AudioEngine;
