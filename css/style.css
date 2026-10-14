@@ -462,6 +462,40 @@ body.day .shooting-star { display: none; }
     50%     { transform: translateX(2px) rotate(var(--lean,0deg)); }
 }
 
+/* Blush: a shy pink glow when the cursor lingers on a plant */
+.plot.plant-blush {
+    border-color: var(--aurora-rose);
+    box-shadow: 0 0 22px rgba(251,113,133,0.45), inset 0 0 16px rgba(251,113,133,0.12);
+}
+.plot.plant-blush .plant-sing-wrapper {
+    animation: blush-wiggle 0.5s ease-in-out;
+}
+@keyframes blush-wiggle {
+    0%, 100% { transform: rotate(var(--lean,0deg)) scale(1); }
+    30%      { transform: rotate(var(--lean,0deg)) scale(1.07); }
+    60%      { transform: rotate(var(--lean,0deg)) scale(0.97); }
+}
+
+/* Sneeze: a quick wind-up jolt */
+.plot.plant-sneeze .plant-sing-wrapper {
+    animation: sneeze-jolt 0.5s ease-out;
+}
+@keyframes sneeze-jolt {
+    0%   { transform: rotate(var(--lean,0deg)) scale(1) translateY(0); }
+    20%  { transform: rotate(var(--lean,0deg)) scale(0.9) translateY(5px); }
+    45%  { transform: rotate(var(--lean,0deg)) scale(1.18) translateY(-6px); }
+    100% { transform: rotate(var(--lean,0deg)) scale(1) translateY(0); }
+}
+
+/* Cough: a short judder */
+.plot.plant-cough .plant-sing-wrapper {
+    animation: cough-judder 0.3s ease-in-out;
+}
+@keyframes cough-judder {
+    0%, 100% { transform: rotate(var(--lean,0deg)) scale(1); }
+    50%      { transform: rotate(var(--lean,0deg)) scale(0.94) translateY(3px); }
+}
+
 /* Speech bubble */
 .speech-bubble {
     position: absolute;
