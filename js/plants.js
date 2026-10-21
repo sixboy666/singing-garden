@@ -70,7 +70,7 @@ var PLANT_TYPES = [
         id: 'luna', name: 'Luna Bloom', emoji: '\uD83C\uDF19',
         colors: { primary: '#a5f3fc', secondary: '#67e8f9', glow: '#22d3ee' },
         animClass: 'anim-float',
-        audio: { notes: [329.63, 392.00, 523.25], voice: 'airy' },
+        audio: { notes: [329.63, 392.00, 523.25], voice: 'airy', rhythm: [1.5, 1, 2] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -95,7 +95,7 @@ var PLANT_TYPES = [
         id: 'ember', name: 'Ember Lily', emoji: '\uD83D\uDD25',
         colors: { primary: '#fdba74', secondary: '#fb923c', glow: '#f97316' },
         animClass: 'anim-flicker',
-        audio: { notes: [261.63, 329.63, 392.00], voice: 'warm' },
+        audio: { notes: [261.63, 329.63, 392.00], voice: 'warm', rhythm: [0.7, 0.7, 1.9] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -115,7 +115,7 @@ var PLANT_TYPES = [
         id: 'aurora', name: 'Aurora Tulip', emoji: '\uD83C\uDF37',
         colors: { primary: '#5ef2d6', secondary: '#e879f9', glow: '#a78bfa' },
         animClass: 'anim-wave',
-        audio: { notes: [392.00, 440.00, 523.25], voice: 'bright' },
+        audio: { notes: [392.00, 440.00, 523.25], voice: 'bright', rhythm: [1, 1.4, 1.3] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -135,7 +135,7 @@ var PLANT_TYPES = [
         id: 'crystal', name: 'Crystal Daisy', emoji: '\u2744\uFE0F',
         colors: { primary: '#e0f2fe', secondary: '#7dd3fc', glow: '#38bdf8' },
         animClass: 'anim-spin-slow',
-        audio: { notes: [440.00, 587.33, 659.25], voice: 'crystal' },
+        audio: { notes: [440.00, 587.33, 659.25], voice: 'crystal', rhythm: [0.55, 0.55, 1.9] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             var petals = '';
@@ -162,7 +162,7 @@ var PLANT_TYPES = [
         id: 'neonrose', name: 'Neon Rose', emoji: '\uD83C\uDF39',
         colors: { primary: '#f0abfc', secondary: '#e879f9', glow: '#d946ef' },
         animClass: 'anim-float',
-        audio: { notes: [293.66, 329.63, 440.00], voice: 'smooth' },
+        audio: { notes: [293.66, 329.63, 440.00], voice: 'smooth', rhythm: [1.2, 0.8, 1.6] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -183,7 +183,7 @@ var PLANT_TYPES = [
         id: 'solar', name: 'Solar Sun', emoji: '\uD83C\uDF3B',
         colors: { primary: '#fde68a', secondary: '#fcd34d', glow: '#f59e0b' },
         animClass: 'anim-bob',
-        audio: { notes: [392.00, 523.25, 659.25], voice: 'bright' },
+        audio: { notes: [392.00, 523.25, 659.25], voice: 'bright', rhythm: [0.9, 0.9, 2.3] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             var rays = '';
@@ -214,7 +214,7 @@ var PLANT_TYPES = [
         id: 'frost', name: 'Frost Fern', emoji: '\u2744\uFE0F',
         colors: { primary: '#bae6fd', secondary: '#7dd3fc', glow: '#38bdf8' },
         animClass: 'anim-wave',
-        audio: { notes: [440.00, 523.25, 659.25], voice: 'airy' },
+        audio: { notes: [440.00, 523.25, 659.25], voice: 'airy', rhythm: [1.1, 1.1, 1.6] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             var fronds = '';
@@ -242,7 +242,7 @@ var PLANT_TYPES = [
         id: 'violet', name: 'Violet Bell', emoji: '\uD83D\uDD14',
         colors: { primary: '#c4b5fd', secondary: '#a78bfa', glow: '#8b5cf6' },
         animClass: 'anim-swing',
-        audio: { notes: [220.00, 293.66, 329.63], voice: 'mellow' },
+        audio: { notes: [220.00, 293.66, 329.63], voice: 'mellow', rhythm: [1.7, 0.9, 1.5] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -262,7 +262,7 @@ var PLANT_TYPES = [
         id: 'moss', name: 'Glow Moss', emoji: '\uD83C\uDF3F',
         colors: { primary: '#86efac', secondary: '#4ade80', glow: '#22c55e' },
         animClass: 'anim-bob',
-        audio: { notes: [196.00, 261.63, 329.63], voice: 'deep' },
+        audio: { notes: [196.00, 261.63, 329.63], voice: 'deep', rhythm: [2.2, 1, 1.3] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
@@ -284,7 +284,7 @@ var PLANT_TYPES = [
         id: 'star', name: 'Star Orchid', emoji: '\u2B50',
         colors: { primary: '#93c5fd', secondary: '#60a5fa', glow: '#3b82f6' },
         animClass: 'anim-spin-slow',
-        audio: { notes: [523.25, 587.33, 783.99], voice: 'crystal' },
+        audio: { notes: [523.25, 587.33, 783.99], voice: 'crystal', rhythm: [0.5, 0.5, 2.1] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             var star = '<path d="M0,-12 L3,-4 L12,-4 L5,2 L7,10 L0,6 L-7,10 L-5,2 L-12,-4 L-3,-4 Z" fill="#fcd34d"/>';
@@ -307,7 +307,7 @@ var PLANT_TYPES = [
         id: 'plasma', name: 'Plasma Peony', emoji: '\uD83E\uDE78',
         colors: { primary: '#f9a8d4', secondary: '#f472b6', glow: '#ec4899' },
         animClass: 'anim-float',
-        audio: { notes: [329.63, 440.00, 523.25], voice: 'smooth' },
+        audio: { notes: [329.63, 440.00, 523.25], voice: 'smooth', rhythm: [1, 1.2, 1.5] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-soft)"' : '';
             var layers = '';
@@ -340,7 +340,7 @@ var PLANT_TYPES = [
         id: 'comet', name: 'Comet Vine', emoji: '\u2604\uFE0F',
         colors: { primary: '#67e8f9', secondary: '#22d3ee', glow: '#06b6d4' },
         animClass: 'anim-wave',
-        audio: { notes: [440.00, 523.25, 587.33], voice: 'airy' },
+        audio: { notes: [440.00, 523.25, 587.33], voice: 'airy', rhythm: [0.8, 0.8, 2.2] },
         renderSVG: function(wl) {
             var g = wl >= 2 ? 'filter="url(#glow-cyan)"' : '';
             return '<svg viewBox="0 0 100 120" width="80" height="96">' + GLOW_DEFS +
