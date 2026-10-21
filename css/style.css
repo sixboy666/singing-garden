@@ -419,10 +419,170 @@ body.day .shooting-star { display: none; }
     box-shadow: 0 0 30px rgba(94,242,214,0.5), inset 0 0 20px rgba(94,242,214,0.15);
 }
 
-/* Growth stage scaling */
-.stage-seed .plant-sway-wrapper  { transform: scale(0.4); }
-.stage-sprout .plant-sway-wrapper { transform: scale(0.7); }
-.stage-bloom .plant-sway-wrapper  { transform: scale(1); }
+/* Growth stage scaling. Uses the standalone `scale` property so it stacks
+   with the animated `transform` on the same element instead of fighting it. */
+.stage-seed .plant-sway-wrapper  { scale: 0.42; }
+.stage-sprout .plant-sway-wrapper { scale: 0.72; }
+.stage-bloom .plant-sway-wrapper  { scale: 1; }
+
+/* ---------- Living plant art (v16) ---------- */
+/* The SVG itself carries the micro-motion: eyes blink, auras breathe,
+   motes orbit, spores rise, frost drifts, bell clappers swing. */
+
+.p-eyes {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: p-blink 6.4s infinite;
+}
+@keyframes p-blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    94%           { transform: scaleY(0.12); }
+    96%           { transform: scaleY(1); }
+}
+
+.p-aura {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: p-aura 4.4s ease-in-out infinite;
+}
+@keyframes p-aura {
+    0%, 100% { opacity: 0.5; transform: scale(0.94); }
+    50%      { opacity: 1;   transform: scale(1.07); }
+}
+
+/* Orbit / halo / ring all spin around the flower centre (viewBox units) */
+.p-orbit,
+.p-orbit-rev,
+.p-halo,
+.p-ring,
+.p-spin {
+    transform-box: view-box;
+    transform-origin: 50px 52px;
+}
+.p-orbit      { animation: p-orbit 9s linear infinite; }
+.p-orbit-rev  { animation: p-orbit-rev 13s linear infinite; }
+.p-halo       { animation: p-orbit 18s linear infinite; }
+.p-ring       { animation: p-orbit 26s linear infinite; }
+.p-spin       { animation: p-orbit 24s linear infinite; }
+
+@keyframes p-orbit     { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+@keyframes p-orbit-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+
+.p-twinkle {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: p-twinkle 2.6s ease-in-out infinite;
+}
+@keyframes p-twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.6); }
+    50%      { opacity: 1;   transform: scale(1.15); }
+}
+
+.p-rise { animation: p-rise 3.4s ease-in infinite; }
+@keyframes p-rise {
+    0%   { opacity: 0; transform: translateY(4px) scale(0.6); }
+    15%  { opacity: 1; }
+    80%  { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-30px) scale(1.1); }
+}
+
+.p-fall { animation: p-fall 4.6s linear infinite; }
+@keyframes p-fall {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    15%  { opacity: 0.9; }
+    100% { opacity: 0; transform: translateY(16px); }
+}
+
+.p-spore { animation: p-spore 4.2s ease-in infinite; }
+@keyframes p-spore {
+    0%   { opacity: 0; transform: translate(0, 6px) scale(0.5); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(3px, -22px) scale(1.1); }
+}
+
+.p-leaf-l,
+.p-leaf-r {
+    transform-box: fill-box;
+    animation: p-leaf 4.6s ease-in-out infinite;
+}
+.p-leaf-l { transform-origin: 100% 50%; }
+.p-leaf-r { transform-origin: 0% 50%; }
+@keyframes p-leaf {
+    0%, 100% { transform: rotate(-4deg); }
+    50%      { transform: rotate(4deg); }
+}
+
+.p-breathe {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: p-breathe 3.8s ease-in-out infinite;
+}
+@keyframes p-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.045); }
+}
+
+.p-ribbon { stroke-dasharray: 5 6; animation: p-dash 2.4s linear infinite; }
+@keyframes p-dash { to { stroke-dashoffset: -22; } }
+
+.p-clapper {
+    transform-box: view-box;
+    transform-origin: 50px 46px;
+    animation: p-clapper 2.6s ease-in-out infinite;
+}
+@keyframes p-clapper {
+    0%, 100% { transform: rotate(-11deg); }
+    50%      { transform: rotate(11deg); }
+}
+
+.p-arc { animation: p-arc 1.8s ease-in-out infinite; }
+@keyframes p-arc {
+    0%, 100% { opacity: 0.25; }
+    45%      { opacity: 0.95; }
+    60%      { opacity: 0.4; }
+}
+
+.p-flicker { animation: p-flicker 2.2s ease-in-out infinite; }
+@keyframes p-flicker {
+    0%, 100% { opacity: 0.82; }
+    50%      { opacity: 1; }
+}
+
+/* Per-species body motion: same wrappers, different swagger */
+.anim-float .plant-sway-wrapper { animation: p-body-float 5.2s ease-in-out infinite; }
+@keyframes p-body-float {
+    0%, 100% { transform: rotate(-2deg) translateY(0); }
+    50%      { transform: rotate(2deg) translateY(-3px); }
+}
+.anim-flicker .plant-sway-wrapper { animation: p-body-flicker 2.6s ease-in-out infinite; }
+@keyframes p-body-flicker {
+    0%, 100% { transform: rotate(-1deg) scale(1); }
+    40%      { transform: rotate(1.5deg) scale(1.02); }
+    70%      { transform: rotate(-1.5deg) scale(0.995); }
+}
+.anim-wave .plant-sway-wrapper { animation: p-body-wave 4.4s ease-in-out infinite; }
+@keyframes p-body-wave {
+    0%, 100% { transform: rotate(-4deg); }
+    50%      { transform: rotate(4deg); }
+}
+.anim-spin-slow .plant-sway-wrapper { animation: p-body-spin 11s ease-in-out infinite; }
+@keyframes p-body-spin {
+    0%, 100% { transform: rotate(-3deg) scale(1); }
+    50%      { transform: rotate(3deg) scale(1.03); }
+}
+.anim-bob .plant-sway-wrapper { animation: p-body-bob 3.4s ease-in-out infinite; }
+@keyframes p-body-bob {
+    0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+    50%      { transform: translateY(-4px) rotate(1.5deg); }
+}
+.anim-swing .plant-sway-wrapper { animation: p-body-swing 4.8s ease-in-out infinite; }
+@keyframes p-body-swing {
+    0%, 100% { transform: rotate(-6deg); }
+    50%      { transform: rotate(6deg); }
+}
+
+/* Grow-in must still win on the first 600ms after planting */
+.plant-container.plant-growing .plant-sway-wrapper { animation: grow-in 0.6s ease-out; }
 
 /* Sleeping / dizzy / tickle states */
 .plot.plant-sleeping .plant-sway-wrapper {
