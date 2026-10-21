@@ -849,7 +849,9 @@ class Game {
             this._speakRandom(index, 'water');
             if (plot.stage >= 1) {
                 this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
-                this.audio.playVoice(plant.id, plant.audio.notes[0] * 1.33, plot.waterLevel, 150);
+                /* pure octave up: always consonant with every plant on
+                   the shared C-major pentatonic scale */
+                this.audio.playVoice(plant.id, plant.audio.notes[0] * 2, plot.waterLevel, 150);
             }
         }
 
@@ -947,7 +949,9 @@ class Game {
             this.showToast('Plant some flowers first!');
             return;
         }
-        var transposes = [-12, -5, 0, 7, 12];
+        /* every transpose keeps notes inside the shared C-major pentatonic
+           scale, so even chaos stays musical */
+        var transposes = [-12, -5, 0, 12];
         var self = this;
         var singers = [];
         planted.forEach(function(idx) {
