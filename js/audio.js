@@ -16,6 +16,22 @@ var VOICE_FORMANTS = {
 
 var SYLLABLES = ['La', 'Lu', 'Li', 'Lo', 'Le', 'Ma', 'Na', 'Da', 'Ba', 'Ya'];
 
+/* C major pentatonic pitch classes: C D E G A.
+   Transposing a note by any interval and snapping it back to the nearest
+   scale tone lets plants answer each other at fifths, fourths or octaves
+   and still land on a note that fits the garden. */
+var PENTA_PCS = [0, 2, 4, 7, 9];
+function snapPentatonic(freq) {
+    var midi = Math.round(12 * Math.log2(freq / 440) + 69);
+    var pc = ((midi % 12) + 12) % 12;
+    if (PENTA_PCS.indexOf(pc) >= 0) return freq;
+    var up = 1, down = 1;
+    while (up < 6 && PENTA_PCS.indexOf(((pc + up) % 12 + 12) % 12) < 0) up++;
+    while (down < 6 && PENTA_PCS.indexOf(((pc - down) % 12 + 12) % 12) < 0) down++;
+    var shift = up <= down ? up : -down;
+    return 440 * Math.pow(2, (midi + shift - 69) / 12);
+}
+
 class AudioEngine {
     constructor() {
         this.ctx = null;
@@ -90,18 +106,31 @@ class AudioEngine {
 
         var transpose = opts.transpose || 0;
         var stepMs = opts.stepMs || 220;
+        var rhythm = opts.rhythm || null;
+        var delayMs = opts.delayMs || 0;
         var sylls = [];
-        var t0 = this.now() + 0.02;
+        var t0 = this.now() + 0.02 + delayMs / 1000;
+        var clock = 0;
 
         for (var i = 0; i < notes.length; i++) {
             var freq = notes[i] * Math.pow(2, transpose / 12);
-            var start = t0 + i * stepMs / 1000;
+            /* Every plant has its own rhythm pattern, so two species sing
+               the same scale with completely different swagger. */
+            var rel = rhythm && rhythm[i] ? rhythm[i] : 1;
+            var start = t0 + clock / 1000;
             /* slight legato overlap: each note rings into the next,
                which glues a phrase into a melody instead of blips */
-            var dur = stepMs / 1000 * 1.08;
+            var dur = stepMs / 1000 * 1.08 * rel;
+            /* Rare cheeky cadence: the last note leaps an octave instead
+               of landing where expected, a musical wink. */
+            if (opts.surprise && i === notes.length - 1) {
+                freq = snapPentatonic(freq * 2);
+                dur *= 1.25;
+            }
             var text = SYLLABLES[(i + (waterLevel || 0)) % SYLLABLES.length];
             this._singNote(freq, start, dur, voice, waterLevel);
-            sylls.push({ t: i * stepMs, text: text });
+            sylls.push({ t: delayMs + clock, text: text });
+            clock += stepMs * rel;
         }
         return sylls;
     }
@@ -241,7 +270,7 @@ class AudioEngine {
             osc.frequency.setValueAtTime(180, t + i * 0.18);
             osc.frequency.exponentialRampToValueAtTime(90, t + i * 0.18 + 0.08);
             g.gain.setValueAtTime(0, t + i * 0.18);
-            g.gain.linearRampToValueAtTime(0.08, t + i * 0.18 + 0.01);
+            g.gain.linearRampToValueAtTime(0.10, t + i * 0.18 + 0.01);
             g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.18 + 0.1);
             osc.connect(g); g.connect(this.master);
             osc.start(t + i * 0.18); osc.stop(t + i * 0.18 + 0.12);
@@ -291,7 +320,7 @@ class AudioEngine {
         var src = this.ctx.createBufferSource();
         src.buffer = buffer;
         var g = this.ctx.createGain();
-        g.gain.value = 0.11;
+        g.gain.value = 0.15;
         var lp = this.ctx.createBiquadFilter();
         lp.type = 'lowpass';
         lp.frequency.value = 800;
@@ -309,7 +338,7 @@ class AudioEngine {
         osc.frequency.exponentialRampToValueAtTime(600, t + 0.08);
         osc.frequency.exponentialRampToValueAtTime(150, t + 0.3);
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.14, t + 0.015);
+        g.gain.linearRampToValueAtTime(0.19, t + 0.015);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
         osc.connect(g); g.connect(this.master);
         osc.start(t); osc.stop(t + 0.4);
@@ -439,7 +468,7 @@ class AudioEngine {
             osc.frequency.setValueAtTime(200 - i * 20, st);
             osc.frequency.exponentialRampToValueAtTime(120, st + 0.09);
             g.gain.setValueAtTime(0.0001, st);
-            g.gain.linearRampToValueAtTime(0.08, st + 0.012);
+            g.gain.linearRampToValueAtTime(0.10, st + 0.012);
             g.gain.exponentialRampToValueAtTime(0.001, st + 0.11);
             osc.connect(lp); lp.connect(g); g.connect(this.master);
             osc.start(st); osc.stop(st + 0.13);
