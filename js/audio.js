@@ -39,6 +39,29 @@ class AudioEngine {
         this.comp.release.value = 0.22;
         this.master.connect(this.comp);
         this.comp.connect(this.ctx.destination);
+
+        /* Gentle shared room reverb: a short synthesized impulse response
+           puts every voice in the same acoustic space, so separate plants
+           blend like a small choir instead of sounding dry and stacked. */
+        this.verb = this.ctx.createConvolver();
+        this.verb.buffer = this._makeImpulse(1.8, 2.8);
+        this.verbGain = this.ctx.createGain();
+        this.verbGain.gain.value = 0.22;
+        this.verb.connect(this.verbGain);
+        this.verbGain.connect(this.master);
+    }
+
+    _makeImpulse(seconds, decay) {
+        var rate = this.ctx.sampleRate;
+        var len = Math.floor(rate * seconds);
+        var buf = this.ctx.createBuffer(2, len, rate);
+        for (var c = 0; c < 2; c++) {
+            var d = buf.getChannelData(c);
+            for (var i = 0; i < len; i++) {
+                d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+            }
+        }
+        return buf;
     }
 
     resume() {
@@ -73,7 +96,9 @@ class AudioEngine {
         for (var i = 0; i < notes.length; i++) {
             var freq = notes[i] * Math.pow(2, transpose / 12);
             var start = t0 + i * stepMs / 1000;
-            var dur = stepMs / 1000 * 0.9;
+            /* slight legato overlap: each note rings into the next,
+               which glues a phrase into a melody instead of blips */
+            var dur = stepMs / 1000 * 1.08;
             var text = SYLLABLES[(i + (waterLevel || 0)) % SYLLABLES.length];
             this._singNote(freq, start, dur, voice, waterLevel);
             sylls.push({ t: i * stepMs, text: text });
@@ -87,12 +112,13 @@ class AudioEngine {
         /* ADSR-ish envelope (gentle attack/release avoids clicks and peaks) */
         var g = ctx.createGain();
         var peak = voice.gain;
-        var sustainEnd = Math.max(start + 0.04, start + dur - 0.07);
+        var sustainEnd = Math.max(start + 0.05, start + dur - 0.12);
         g.gain.setValueAtTime(0.0001, start);
-        g.gain.linearRampToValueAtTime(peak, start + 0.035);
+        g.gain.linearRampToValueAtTime(peak, start + 0.055);
         g.gain.setValueAtTime(peak, sustainEnd);
         g.gain.exponentialRampToValueAtTime(0.001, start + dur);
         g.connect(this.master);
+        if (this.verb) g.connect(this.verb);
 
         /* Formant summing bus. NOTE: the three vowel bandpass filters MUST
            run in PARALLEL — chaining narrow bandpass filters in series
@@ -215,7 +241,7 @@ class AudioEngine {
             osc.frequency.setValueAtTime(180, t + i * 0.18);
             osc.frequency.exponentialRampToValueAtTime(90, t + i * 0.18 + 0.08);
             g.gain.setValueAtTime(0, t + i * 0.18);
-            g.gain.linearRampToValueAtTime(0.1, t + i * 0.18 + 0.01);
+            g.gain.linearRampToValueAtTime(0.08, t + i * 0.18 + 0.01);
             g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.18 + 0.1);
             osc.connect(g); g.connect(this.master);
             osc.start(t + i * 0.18); osc.stop(t + i * 0.18 + 0.12);
@@ -265,7 +291,7 @@ class AudioEngine {
         var src = this.ctx.createBufferSource();
         src.buffer = buffer;
         var g = this.ctx.createGain();
-        g.gain.value = 0.15;
+        g.gain.value = 0.11;
         var lp = this.ctx.createBiquadFilter();
         lp.type = 'lowpass';
         lp.frequency.value = 800;
@@ -283,7 +309,7 @@ class AudioEngine {
         osc.frequency.exponentialRampToValueAtTime(600, t + 0.08);
         osc.frequency.exponentialRampToValueAtTime(150, t + 0.3);
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.2, t + 0.015);
+        g.gain.linearRampToValueAtTime(0.14, t + 0.015);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
         osc.connect(g); g.connect(this.master);
         osc.start(t); osc.stop(t + 0.4);
@@ -413,7 +439,7 @@ class AudioEngine {
             osc.frequency.setValueAtTime(200 - i * 20, st);
             osc.frequency.exponentialRampToValueAtTime(120, st + 0.09);
             g.gain.setValueAtTime(0.0001, st);
-            g.gain.linearRampToValueAtTime(0.1, st + 0.012);
+            g.gain.linearRampToValueAtTime(0.08, st + 0.012);
             g.gain.exponentialRampToValueAtTime(0.001, st + 0.11);
             osc.connect(lp); lp.connect(g); g.connect(this.master);
             osc.start(st); osc.stop(st + 0.13);
