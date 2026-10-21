@@ -507,7 +507,11 @@ class Game {
         if (!plant) return;
         this._triggerSingVisual(idx, plant);
         var conductNote = plot.stage === 1 ? plant.audio.notes[0] : plant.audio.notes[Math.floor(Math.random() * plant.audio.notes.length)];
-        var phrase = this.audio.singPhrase(plant.id, [conductNote], plot.waterLevel, { stepMs: 180 });
+        var phrase = this.audio.singPhrase(plant.id, [conductNote], plot.waterLevel, {
+            stepMs: 180,
+            /* each poke has a slightly different swagger */
+            rhythm: [1 + Math.random() * 0.7]
+        });
         var self = this;
         phrase.forEach(function(syll) {
             setTimeout(function() {
@@ -798,7 +802,13 @@ class Game {
             return;
         }
         var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
-        var phrase = this.audio.singPhrase(plant.id, notes, plot.waterLevel);
+        /* Bloom-stage plants occasionally put a cheeky octave leap on the
+           last note: the garden keeps a straight face, the plant does not. */
+        var cheeky = plot.stage === 2 && Math.random() < 0.14;
+        var phrase = this.audio.singPhrase(plant.id, notes, plot.waterLevel, {
+            rhythm: plant.audio.rhythm,
+            surprise: cheeky
+        });
         this._triggerSingVisual(index, plant);
 
         phrase.forEach(function(syll) {
@@ -806,12 +816,62 @@ class Game {
                 self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
             }, syll.t);
         });
+        if (cheeky) {
+            setTimeout(function() { self.effects.spawnSparkles(plot.element); }, 120);
+        }
+        /* Half the time the plant next door answers, so the garden
+           banters instead of each flower singing into the void. */
+        if (!fromMelody && plot.stage === 2 && Math.random() < 0.5) {
+            var tail = 0;
+            phrase.forEach(function(s) { if (s.t > tail) tail = s.t; });
+            this._answerNeighbor(index, plant, tail + 320);
+        }
         if (plot.stage === 2 && plot.waterLevel >= 2) {
             setTimeout(function() {
                 self.effects.spawnHearts(plot.element);
                 self.effects.spawnLightRays(plot.element);
             }, 200);
         }
+    }
+
+    /* ---- Call and response ----
+       A neighbouring plant replies on the last note of the phrase, a
+       consonant interval away, so two flowers trade musical banter. */
+    _answerNeighbor(index, plant, delayMs) {
+        var self = this;
+        var offsets = [-1, 1, -4, 4];
+        var picks = [];
+        for (var i = 0; i < offsets.length; i++) {
+            var idx = index + offsets[i];
+            if (idx < 0 || idx >= this.plots.length) continue;
+            var p = this.plots[idx];
+            if (p.planted && p.stage >= 1 && !p.dizzy) picks.push(idx);
+        }
+        if (!picks.length) return;
+
+        var ni = picks[Math.floor(Math.random() * picks.length)];
+        var nplot = this.plots[ni];
+        var nplant = getPlantById(nplot.plantType);
+        if (!nplant) return;
+
+        if (nplot.sleeping) this._wakePlot(ni);
+        nplot.lastTouch = Date.now();
+
+        /* Fifth up, octave up or fourth down — all snapped into the scale. */
+        var intervals = [7, 12, -5];
+        var semi = intervals[Math.floor(Math.random() * intervals.length)];
+        var notes = plant.audio.notes;
+        var base = notes[notes.length - 1];
+        var freq = snapPentatonic(base * Math.pow(2, semi / 12));
+        this.audio.playVoice(nplant.id, freq, nplot.waterLevel, delayMs);
+        this._triggerSingVisual(ni, nplant);
+
+        setTimeout(function() {
+            self.effects.spawnNote(nplot.element, nplant.colors.primary, 'Yah');
+            if (nplot.plantType === plant.plantType && Math.random() < 0.5) {
+                self._speakRandom(ni, 'twin');
+            }
+        }, delayMs + 40);
     }
 
     /* ---- Water ---- */
@@ -849,9 +909,12 @@ class Game {
             this._speakRandom(index, 'water');
             if (plot.stage >= 1) {
                 this.audio.playVoice(plant.id, plant.audio.notes[0], plot.waterLevel, 0);
-                /* pure octave up: always consonant with every plant on
-                   the shared C-major pentatonic scale */
-                this.audio.playVoice(plant.id, plant.audio.notes[0] * 2, plot.waterLevel, 150);
+                /* Answers itself a fifth or an octave up — always a
+                   consonant interval, snapped into the garden scale. */
+                var up = Math.random() < 0.5 ? 7 : 12;
+                this.audio.playVoice(plant.id,
+                    snapPentatonic(plant.audio.notes[0] * Math.pow(2, up / 12)),
+                    plot.waterLevel, 170);
             }
         }
 
@@ -918,13 +981,23 @@ class Game {
             this.showToast('Wait for the little ones to grow!');
             return;
         }
-        singers.forEach(function(idx) {
+        var seen = {};
+        singers.forEach(function(idx, n) {
             var plot = self.plots[idx];
             var plant = getPlantById(plot.plantType);
             if (!plant) return;
             var wl = Math.max(plot.waterLevel, 1);
             var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
-            var phrase = self.audio.singPhrase(plant.id, notes, wl, { stepMs: 300 });
+            /* Same species neighbours double up an octave, and every plant
+               enters a beat after the one before: a rolling garden canon. */
+            var octave = seen[plot.plantType] ? 12 : 0;
+            seen[plot.plantType] = true;
+            var phrase = self.audio.singPhrase(plant.id, notes, wl, {
+                stepMs: 300,
+                rhythm: plant.audio.rhythm,
+                delayMs: n * 90,
+                transpose: octave
+            });
             phrase.forEach(function(syll) {
                 setTimeout(function() {
                     self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
@@ -971,12 +1044,16 @@ class Game {
             var tr = transposes[Math.floor(Math.random() * transposes.length)];
             var wl = Math.max(plot.waterLevel, 2);
             var notes = plot.stage === 1 ? [plant.audio.notes[0]] : plant.audio.notes;
-            var phrase = self.audio.singPhrase(plant.id, notes, wl, { transpose: tr });
+            var phrase = self.audio.singPhrase(plant.id, notes, wl, {
+                transpose: tr,
+                rhythm: plant.audio.rhythm,
+                delayMs: n * 120
+            });
             phrase.forEach(function(syll) {
                 setTimeout(function() {
                     self.effects.spawnNote(plot.element, plant.colors.primary, syll.text);
                     if (Math.random() < 0.35) self.effects.spawnSparkles(plot.element);
-                }, syll.t + n * 120);
+                }, syll.t);
             });
             self._triggerSingVisual(idx, plant);
             plot.lastTouch = Date.now();
