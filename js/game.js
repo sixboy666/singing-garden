@@ -1,6 +1,6 @@
 /* ============================================================
    SINGING GARDEN v9 — GAME CONTROLLER
-   Aurora Bloom: growth stages, day/night, conduct mode,
+   Pixel Garden: growth stages, four scenes, conduct mode,
    plant/water modes, melody/harmony/chaos, silly reactions
    ============================================================ */
 
@@ -65,13 +65,9 @@ var SILLY_LINES = {
         "...five more blooms...", "...zzz... encore...",
         "...do not poke the moon...", "...mm... more rain..."
     ],
-    day: [
-        "Aaah! Too bright!", "Who turned on the sun?",
-        "Finally, vitamin D!", "*blink blink* My eyes!"
-    ],
-    nightStart: [
-        "Ooh. Mood lighting.", "Now we GLOW.",
-        "The night is ours.", "*sparkle* Showtime."
+    scene: [
+        "New world, same me!", "Ooh, new air!", "Another little world.",
+        "Look, I can grow here too!", "Fresh dirt! Lovely."
     ],
     twin: [
         "Hey, twin!", "Copycat!", "Twinsies! Harmonize?",
@@ -89,6 +85,14 @@ var STAGE_SPROUT_MS = 1100;
 
 var MODES = { PLANT: 'plant', CONDUCT: 'conduct', WATER: 'water' };
 
+/* Four pixel worlds share one rule set; only the palette changes. */
+var SCENES = [
+    { id: 'meadow', label: 'Meadow' },
+    { id: 'sakura', label: 'Sakura Grove' },
+    { id: 'desert', label: 'Desert Oasis' },
+    { id: 'snow', label: 'Snowfield' }
+];
+
 class Game {
     constructor() {
         this.audio = new AudioEngine();
@@ -97,7 +101,7 @@ class Game {
         this.mode = MODES.PLANT;
         this.selectedPlantType = null;
         this.muted = false;
-        this.isNight = true;
+        this.scene = 0;
         this.isPlayingMelody = false;
         this.melodyStopped = false;
         this._toastTimer = null;
@@ -123,7 +127,7 @@ class Game {
         this.setupKeyboard();
         this.effects.init(document.getElementById('effects-canvas'));
         this.selectedPlantType = PLANT_TYPES[0].id;
-        this.applyDayNight();
+        this.applyScene();
         this.updateUI();
         this.startAnimationLoop();
         this._startIdleLoop();
@@ -345,8 +349,8 @@ class Game {
         });
     }
 
-    /* ---- Reaction to the day / night switch ---- */
-    _reactDayNight() {
+    /* ---- Reaction to a scene switch ---- */
+    _reactScene() {
         var self = this;
         var roster = [];
         for (var i = 0; i < this.plots.length; i++) {
@@ -354,12 +358,10 @@ class Game {
             if (p.planted && !p.sleeping) roster.push(i);
         }
         if (!roster.length) return;
-        var ctxName = this.isNight ? 'nightStart' : 'day';
         roster.forEach(function(idx, k) {
-            setTimeout(function() { self._speakRandom(idx, ctxName); }, k * 240);
+            setTimeout(function() { self._speakRandom(idx, 'scene'); }, k * 240);
         });
-        if (this.isNight) this.audio.playHum(165);
-        else this.audio.playSigh();
+        this.audio.playHum(165);
     }
 
     /* ---- Cursor lean ---- */
@@ -564,7 +566,7 @@ class Game {
             btn.className = 'plant-btn';
             btn.dataset.plantId = plant.id;
             btn.innerHTML =
-                '<span class="plant-btn-emoji">' + plant.emoji + '</span>' +
+                '<span class="plant-btn-icon">' + plant.renderSVG(0) + '</span>' +
                 '<span class="plant-btn-name">' + plant.name + '</span>';
             (function(plantBtn, plantId) {
                 plantBtn.addEventListener('click', function() {
@@ -600,8 +602,24 @@ class Game {
         document.getElementById('mute-btn').addEventListener('click', function() {
             self.toggleMute();
         });
-        document.getElementById('time-btn').addEventListener('click', function() {
-            self.toggleDayNight();
+        document.getElementById('scene-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            self.toggleSceneMenu();
+        });
+        document.querySelectorAll('.scene-opt').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var idx = 0;
+                for (var i = 0; i < SCENES.length; i++) {
+                    if (SCENES[i].id === btn.dataset.scene) idx = i;
+                }
+                self.selectScene(idx);
+            });
+        });
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('scene-menu');
+            if (menu.classList.contains('hidden')) return;
+            if (menu.contains(e.target)) return;
+            menu.classList.add('hidden');
         });
         document.getElementById('help-btn').addEventListener('click', function() {
             self.showHelp();
@@ -642,7 +660,7 @@ class Game {
                 case '2': self.setMode(MODES.CONDUCT); break;
                 case '3': self.setMode(MODES.WATER); break;
                 case 'n': case 'N':
-                    self.toggleDayNight();
+                    self.cycleScene();
                     break;
                 case 'm': case 'M':
                     self.toggleMute();
@@ -1115,25 +1133,33 @@ class Game {
         this.showToast(this.muted ? 'Muted' : 'Sound on');
     }
 
-    /* ---- Day / Night ---- */
-    toggleDayNight() {
-        this.isNight = !this.isNight;
-        this.applyDayNight();
-        if (this.isNight) {
-            this.showToast('Night falls... the garden glows.');
-        } else {
-            this.showToast('Morning breaks!');
+    /* ---- Scenes ---- */
+    toggleSceneMenu() {
+        document.getElementById('scene-menu').classList.toggle('hidden');
+    }
+
+    cycleScene() {
+        this.selectScene((this.scene + 1) % SCENES.length);
+    }
+
+    selectScene(index) {
+        if (index === this.scene) {
+            document.getElementById('scene-menu').classList.add('hidden');
+            return;
         }
-        this._reactDayNight();
+        this.scene = index;
+        this.applyScene();
+        document.getElementById('scene-menu').classList.add('hidden');
+        this.showToast(SCENES[index].label);
+        this.effects.setScene(SCENES[index].id);
+        this._reactScene();
         this.updateUI();
     }
 
-    applyDayNight() {
-        if (this.isNight) {
-            document.body.classList.remove('day');
-        } else {
-            document.body.classList.add('day');
-        }
+    applyScene() {
+        var scene = SCENES[this.scene] || SCENES[0];
+        document.body.dataset.scene = scene.id;
+        this.effects.setScene(scene.id);
     }
 
     /* ---- Help ---- */
@@ -1186,8 +1212,14 @@ class Game {
         var muteBtn = document.getElementById('mute-btn');
         muteBtn.textContent = this.muted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
 
-        var timeBtn = document.getElementById('time-btn');
-        timeBtn.textContent = this.isNight ? '\uD83C\uDF19' : '\u2600\uFE0F';
+        var sceneOpts = document.querySelectorAll('.scene-opt');
+        for (var s = 0; s < sceneOpts.length; s++) {
+            if (sceneOpts[s].dataset.scene === SCENES[this.scene].id) {
+                sceneOpts[s].classList.add('active');
+            } else {
+                sceneOpts[s].classList.remove('active');
+            }
+        }
 
         for (var j = 0; j < this.plots.length; j++) {
             var plot = this.plots[j];
