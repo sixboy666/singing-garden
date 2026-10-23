@@ -3,35 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Singing Garden — Aurora Bloom</title>
-    <link rel="stylesheet" href="css/style.css?v=16">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+    <title>Singing Garden — Pixel Garden</title>
+    <link rel="stylesheet" href="css/style.css?v=17">
 </head>
-<body>
+<body data-scene="meadow">
     <div id="game-container">
 
-        <!-- Aurora background layers -->
-        <div class="aurora-bg">
-            <div class="aurora-band band-1"></div>
-            <div class="aurora-band band-2"></div>
-            <div class="aurora-band band-3"></div>
-            <div class="stars-layer"></div>
-        </div>
+        <!-- dither overlay that keeps the flat sky looking hand-made -->
+        <div class="sky-grain"></div>
 
         <!-- Start Screen -->
         <div id="start-screen" class="screen">
             <div class="start-content">
-                <div class="title-glow">
+                <div class="title-notes">
                     <span class="float-note n1">&#9834;</span>
                     <span class="float-note n2">&#9835;</span>
                     <span class="float-note n3">&#9833;</span>
                 </div>
                 <h1 class="game-title">Singing Garden</h1>
-                <p class="game-subtitle">Aurora Bloom &mdash; grow glowing plants, conduct their song, paint the night with sound.</p>
-                <button id="start-btn" class="big-btn"><span class="btn-glow"></span>Enter the Garden</button>
-                <p class="hint-text">Best with sound on &#128266; &middot; headphones recommended</p>
+                <p class="game-subtitle">Plant pixel flowers, teach them a tune, and conduct a tiny choir across four little worlds.</p>
+                <button id="start-btn" class="big-btn">Enter the Garden</button>
+                <p class="hint-text">Sound on recommended</p>
             </div>
         </div>
 
@@ -45,26 +37,97 @@
                     <span class="brand-name">Singing Garden</span>
                 </div>
                 <div id="mode-switcher" class="mode-switcher">
-                    <button class="mode-btn active" data-mode="plant" title="Plant mode">&#127793; Plant</button>
-                    <button class="mode-btn" data-mode="conduct" title="Conduct mode: drag across plants">&#127926; Conduct</button>
-                    <button class="mode-btn" data-mode="water" title="Water mode">&#128167; Water</button>
+                    <button class="mode-btn active" data-mode="plant" title="Plant mode">Plant</button>
+                    <button class="mode-btn" data-mode="conduct" title="Conduct mode: drag across plants">Conduct</button>
+                    <button class="mode-btn" data-mode="water" title="Water mode">Water</button>
                 </div>
                 <div class="top-controls">
-                    <button id="time-btn" class="icon-btn" title="Toggle day / night">&#127769;</button>
+                    <button id="scene-btn" class="icon-btn" title="Change scene (N)">
+                        <span class="ico-scene"></span>
+                    </button>
                     <button id="mute-btn" class="icon-btn" title="Mute">&#128266;</button>
                     <button id="help-btn" class="icon-btn" title="How to play">?</button>
                 </div>
             </div>
 
+            <!-- Scene picker -->
+            <div id="scene-menu" class="hidden">
+                <p class="scene-title">Choose a scene</p>
+                <button class="scene-opt active" data-scene="meadow"><span class="sw sw-meadow"></span>Meadow</button>
+                <button class="scene-opt" data-scene="sakura"><span class="sw sw-sakura"></span>Sakura Grove</button>
+                <button class="scene-opt" data-scene="desert"><span class="sw sw-desert"></span>Desert Oasis</button>
+                <button class="scene-opt" data-scene="snow"><span class="sw sw-snow"></span>Snowfield</button>
+            </div>
+
             <!-- Garden stage -->
             <div id="garden-stage">
                 <div id="sky-decor">
-                    <div class="moon"></div>
-                    <div class="shooting-star s1"></div>
-                    <div class="shooting-star s2"></div>
+                    <svg class="px-sun" viewBox="0 0 20 20" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect class="s1" x="9" y="0" width="2" height="3"/>
+                        <rect class="s1" x="9" y="17" width="2" height="3"/>
+                        <rect class="s1" x="0" y="9" width="3" height="2"/>
+                        <rect class="s1" x="17" y="9" width="3" height="2"/>
+                        <rect class="s1" x="2" y="2" width="3" height="3"/>
+                        <rect class="s1" x="15" y="2" width="3" height="3"/>
+                        <rect class="s1" x="2" y="15" width="3" height="3"/>
+                        <rect class="s1" x="15" y="15" width="3" height="3"/>
+                        <rect class="s2" x="6" y="7" width="8" height="6"/>
+                        <rect class="s2" x="7" y="6" width="6" height="8"/>
+                        <rect class="s3" x="8" y="8" width="4" height="4"/>
+                    </svg>
+
+                    <svg class="px-cloud cloud-a" viewBox="0 0 24 10" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect x="8" y="0" width="8" height="2"/>
+                        <rect x="5" y="2" width="14" height="2"/>
+                        <rect x="2" y="4" width="20" height="3"/>
+                        <rect x="5" y="7" width="14" height="2"/>
+                    </svg>
+                    <svg class="px-cloud cloud-b" viewBox="0 0 24 10" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect x="8" y="0" width="8" height="2"/>
+                        <rect x="5" y="2" width="14" height="2"/>
+                        <rect x="2" y="4" width="20" height="3"/>
+                        <rect x="5" y="7" width="14" height="2"/>
+                    </svg>
+                    <svg class="px-cloud cloud-c" viewBox="0 0 24 10" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect x="8" y="0" width="8" height="2"/>
+                        <rect x="5" y="2" width="14" height="2"/>
+                        <rect x="2" y="4" width="20" height="3"/>
+                        <rect x="5" y="7" width="14" height="2"/>
+                    </svg>
+
+                    <svg class="px-prop prop-tree" viewBox="0 0 40 44" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect class="p2" x="18" y="28" width="4" height="16"/>
+                        <rect class="p2" x="14" y="40" width="12" height="4"/>
+                        <rect class="p1" x="16" y="16" width="8" height="4"/>
+                        <rect class="p1" x="10" y="20" width="20" height="6"/>
+                        <rect class="p1" x="6" y="26" width="28" height="4"/>
+                        <rect class="p3" x="14" y="12" width="12" height="4"/>
+                        <rect class="p3" x="10" y="16" width="8" height="4"/>
+                        <rect class="p3" x="26" y="18" width="6" height="4"/>
+                    </svg>
+                    <svg class="px-prop prop-cactus" viewBox="0 0 40 44" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect class="p2" x="16" y="12" width="8" height="32"/>
+                        <rect class="p1" x="17" y="12" width="6" height="30"/>
+                        <rect class="p1" x="8" y="20" width="8" height="4"/>
+                        <rect class="p1" x="8" y="12" width="3" height="12"/>
+                        <rect class="p1" x="24" y="26" width="8" height="4"/>
+                        <rect class="p1" x="29" y="18" width="3" height="12"/>
+                        <rect class="p3" x="20" y="16" width="2" height="20"/>
+                    </svg>
+                    <svg class="px-prop prop-pine" viewBox="0 0 40 44" shape-rendering="crispEdges" aria-hidden="true">
+                        <rect class="p2" x="18" y="34" width="4" height="10"/>
+                        <rect class="p1" x="16" y="4" width="8" height="6"/>
+                        <rect class="p1" x="12" y="10" width="16" height="6"/>
+                        <rect class="p1" x="8" y="16" width="24" height="6"/>
+                        <rect class="p1" x="4" y="22" width="32" height="6"/>
+                        <rect class="p1" x="2" y="28" width="36" height="6"/>
+                        <rect class="p3" x="18" y="6" width="4" height="10"/>
+                        <rect class="p3" x="12" y="18" width="4" height="6"/>
+                    </svg>
                 </div>
+
+                <div class="px-ground"></div>
                 <div id="plots-container"></div>
-                <div class="ground-glow"></div>
             </div>
 
             <!-- Bottom dock -->
@@ -80,10 +143,10 @@
                         <span class="d-ico">&#9835;</span><span class="d-lbl">Harmony</span>
                     </button>
                     <button id="chaos-btn" class="dock-btn warn" title="Chaos choir">
-                        <span class="d-ico">&#129315;</span><span class="d-lbl">Chaos</span>
+                        <span class="d-ico">&#9889;</span><span class="d-lbl">Chaos</span>
                     </button>
                     <button id="clear-btn" class="dock-btn ghost" title="Clear garden">
-                        <span class="d-ico">&#128465;</span><span class="d-lbl">Clear</span>
+                        <span class="d-ico">&#10005;</span><span class="d-lbl">Clear</span>
                     </button>
                 </div>
             </div>
@@ -91,14 +154,14 @@
 
         <!-- Help modal -->
         <div id="help-modal" class="modal hidden">
-            <div class="modal-content aurora-card">
-                <h2>Welcome to Aurora Bloom</h2>
+            <div class="modal-content">
+                <h2>How the Garden Works</h2>
                 <div class="help-grid">
-                    <div class="help-item"><span class="h-ico">&#127793;</span><div><h4>Plant</h4><p>Pick a glowing seed from the dock, then tap an empty plot. Plants grow from seed to sprout to bloom.</p></div></div>
-                    <div class="help-item"><span class="h-ico">&#127926;</span><div><h4>Sing</h4><p>Tap a blooming plant to hear its voice. Each species sings a different syllable.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#127793;</span><div><h4>Plant</h4><p>Pick a seed from the dock, then tap an empty plot. Plants grow from seed to sprout to bloom.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#127926;</span><div><h4>Sing</h4><p>Tap a blooming plant to hear its voice. Each species sings its own syllables.</p></div></div>
                     <div class="help-item"><span class="h-ico">&#128167;</span><div><h4>Water</h4><p>Switch to Water mode and tap a plant. Watered plants sing richer harmonies.</p></div></div>
-                    <div class="help-item"><span class="h-ico">&#9997;</span><div><h4>Conduct</h4><p>Switch to Conduct mode, then drag across plants to make them sing in sequence — your own melody.</p></div></div>
-                    <div class="help-item"><span class="h-ico">&#127769;</span><div><h4>Day / Night</h4><p>Toggle the sky. Night makes the garden glow brighter.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#9997;</span><div><h4>Conduct</h4><p>Switch to Conduct mode, then drag across plants to make them sing in sequence.</p></div></div>
+                    <div class="help-item"><span class="h-ico">&#127956;</span><div><h4>Scenes</h4><p>Tap the flower icon in the top bar (or press N) to move the garden between meadow, sakura grove, desert oasis and snowfield.</p></div></div>
                     <div class="help-item"><span class="h-ico">&#9835;</span><div><h4>Harmony &amp; Chaos</h4><p>Harmony sings everyone in tune; Chaos lets everyone improvise at once.</p></div></div>
                     <div class="help-item"><span class="h-ico">&#129315;</span><div><h4>Personality</h4><p>Your plants sneeze, cough, gossip and hum. Overwater one and the sneeze spreads to its neighbours.</p></div></div>
                 </div>
@@ -109,9 +172,9 @@
         <canvas id="effects-canvas"></canvas>
     </div>
 
-    <script src="js/audio.js?v=16"></script>
-    <script src="js/plants.js?v=16"></script>
-    <script src="js/effects.js?v=16"></script>
-    <script src="js/game.js?v=16"></script>
+    <script src="js/audio.js?v=17"></script>
+    <script src="js/plants.js?v=17"></script>
+    <script src="js/effects.js?v=17"></script>
+    <script src="js/game.js?v=17"></script>
 </body>
 </html>
