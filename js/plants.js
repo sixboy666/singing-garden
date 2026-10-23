@@ -1,471 +1,474 @@
 /* ============================================================
-   SINGING GARDEN v16 - PLANTS
-   12 redesigned bioluminescent species. Every species now has
-   its own silhouette plus moving parts: blinking eyes, a
-   breathing aura, orbiting motes, rising spores, drifting frost,
-   swinging bell clappers and waving leaves.
+   SINGING GARDEN v17 - PLANTS (PIXEL EDITION)
+   12 species drawn on a 24 x 30 integer grid. Every rect is
+   snapped to whole pixels and every svg uses crispEdges, so the
+   art stays razor sharp at any scale. Flat 3-5 tone palettes,
+   no gradients, no blur, no glow filters.
    ============================================================ */
 
-var INK = '#1a1228';
+var INK = '#2a2438';
+var PAPER = '#fffdf5';
+var CHEEK = '#f08fa5';
 
-/* ---------- shared art helpers ---------- */
+/* ---------- pixel primitives ---------- */
 
-/* Face: half-lidded almond eyes, shine, soft smile, blush.
-   The eye group blinks on its own so every plant feels awake. */
-function faceSVG(cx, cy, s, delay) {
-    s = s || 1;
-    var d = (delay === undefined ? 0 : delay);
-    var ex = cx - 9 * s;
-    var rx = cx + 9 * s;
-    var ey = cy - 2 * s;
-    var er = 2.3 * s;
-    function eye(x) {
-        return '<path d="M' + (x - er) + ',' + ey +
-            ' Q' + x + ',' + (ey - er * 0.8) + ' ' + (x + er) + ',' + ey +
-            ' Q' + x + ',' + (ey + er * 0.35) + ' ' + (x - er) + ',' + ey + ' Z" ' +
-            'fill="' + INK + '"/>';
-    }
-    return '<g class="p-eyes" style="animation-delay:' + d + 's">' +
-        eye(ex) + eye(rx) +
-        '<circle cx="' + (ex - 0.5 * s) + '" cy="' + (ey - 0.5 * s) + '" r="' + (0.8 * s) + '" fill="#fff" opacity="0.9"/>' +
-        '<circle cx="' + (rx - 0.5 * s) + '" cy="' + (ey - 0.5 * s) + '" r="' + (0.8 * s) + '" fill="#fff" opacity="0.9"/>' +
-        '</g>' +
-        '<path d="M' + (cx - 6 * s) + ',' + (cy + 6 * s) +
-        ' Q' + cx + ',' + (cy + 11 * s) + ' ' + (cx + 6 * s) + ',' + (cy + 6 * s) + '" ' +
-        'fill="none" stroke="' + INK + '" stroke-width="' + (1.7 * s) + '" stroke-linecap="round"/>' +
-        '<circle cx="' + (cx - 13 * s) + '" cy="' + (cy + 4 * s) + '" r="' + (3.2 * s) + '" fill="#fb7185" opacity="0.32"/>' +
-        '<circle cx="' + (cx + 13 * s) + '" cy="' + (cy + 4 * s) + '" r="' + (3.2 * s) + '" fill="#fb7185" opacity="0.32"/>';
+function px(x, y, w, h, c) {
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>';
 }
 
-function plantDefs(id, c) {
-    return '<defs>' +
-        '<radialGradient id="aura-' + id + '" cx="50%" cy="50%" r="50%">' +
-        '<stop offset="0%" stop-color="' + c.glow + '" stop-opacity="0.5"/>' +
-        '<stop offset="55%" stop-color="' + c.glow + '" stop-opacity="0.16"/>' +
-        '<stop offset="100%" stop-color="' + c.glow + '" stop-opacity="0"/>' +
-        '</radialGradient>' +
-        '<linearGradient id="body-' + id + '" x1="0" y1="1" x2="0" y2="0">' +
-        '<stop offset="0%" stop-color="' + c.secondary + '"/>' +
-        '<stop offset="100%" stop-color="' + c.primary + '"/>' +
-        '</linearGradient>' +
-        '</defs>';
+function pxo(x, y, w, h, c, o) {
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '" opacity="' + o + '"/>';
 }
 
-/* Water level adds animated ripple rings, so a thirsty plant
-   visibly hums with a wider halo. */
-function svgShell(id, c, wl, inner) {
-    var rings = '';
-    if (wl >= 1) {
-        rings += '<circle class="p-ring" cx="50" cy="52" r="30" fill="none" stroke="' + c.glow +
-            '" stroke-width="1.1" stroke-dasharray="3 8" opacity="0.6"/>';
+/* horizontally centred rect (w should be even so edges stay on the grid) */
+function mid(cx, y, w, h, c) {
+    return px(cx - w / 2, y, w, h, c);
+}
+
+/* mirrored left/right rect pair at a fixed gap from the centre */
+function pairPx(cx, y, w, h, gap, c) {
+    return px(cx - gap - w, y, w, h, c) + px(cx + gap, y, w, h, c);
+}
+
+/* 5 x 4 stepped leaf */
+function leafPx(x, y, cl, cd) {
+    return px(x + 1, y, 3, 1, cl) +
+        px(x, y + 1, 5, 1, cl) +
+        px(x, y + 2, 5, 1, cd) +
+        px(x + 1, y + 3, 3, 1, cd);
+}
+
+/* 2 px wide stem with a shaded right column */
+function stemPx(x, yTop, yBot, c, cd) {
+    return px(x, yTop, 2, yBot - yTop, c) + px(x + 1, yTop, 1, yBot - yTop, cd);
+}
+
+/* Bresenham straight line of square pixels, used for fern fronds and
+   the comet tail so those shapes stay perfectly on the grid. */
+function pxLine(x0, y0, x1, y1, c, size) {
+    size = size || 1;
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    var err = dx - dy, guard = 0;
+    var x = x0, y = y0, out = '';
+    while (guard++ < 240) {
+        out += px(x, y, size, size, c);
+        if (x === x1 && y === y1) break;
+        var e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x += sx; }
+        if (e2 < dx) { err += dx; y += sy; }
     }
+    return out;
+}
+
+/* ---------- face: open eyes, blink frame, mouth, blush ---------- */
+/* Two stacked groups: one open, one shut. CSS toggles them with a
+   steps() animation so the blink is a hard 2 frame cut, not a fade. */
+function faceGroup(cx, cy, cheek, delay, spread, mouthDy) {
+    spread = spread || 5;
+    mouthDy = mouthDy === undefined ? 4 : mouthDy;
+    var d = delay === undefined ? 0 : delay;
+    var lx = cx - spread;
+    var rx = cx + spread - 2;
+    var open = px(lx, cy, 2, 2, INK) + px(rx, cy, 2, 2, INK) +
+        px(lx, cy, 1, 1, PAPER) + px(rx, cy, 1, 1, PAPER);
+    var shut = px(lx, cy + 1, 2, 1, INK) + px(rx, cy + 1, 2, 1, INK);
+    var mouth = px(cx - 1, cy + mouthDy, 3, 1, INK);
+    var blush = cheek ?
+        (px(cx - spread - 3, cy + mouthDy - 1, 2, 1, cheek) +
+            px(cx + spread + 1, cy + mouthDy - 1, 2, 1, cheek)) : '';
+    return '<g class="px-eyes" style="animation-delay:' + d + 's">' + open + '</g>' +
+        '<g class="px-eyes-shut" style="animation-delay:' + d + 's">' + shut + '</g>' +
+        mouth + blush;
+}
+
+/* animated 3 x 3 plus shaped sparkle */
+function sparkPx(x, y, c, delay, cls) {
+    return '<g class="' + (cls || 'px-spark') + '" style="animation-delay:' + (delay || 0) + 's">' +
+        px(x + 1, y, 1, 1, c) + px(x, y + 1, 3, 1, c) + px(x + 1, y + 2, 1, 1, c) + '</g>';
+}
+
+function baseShadow() {
+    return pxo(2, 28, 20, 2, INK, 0.1);
+}
+
+/* Water level leaves visible pixel puddles and damp specks at the roots */
+function waterMarks(wl, c) {
+    if (wl < 1) return '';
+    var w = c.water || '#5aa8e0';
+    var out = pxo(3, 28, 18, 2, w, 0.26);
     if (wl >= 2) {
-        rings += '<circle class="p-ring" style="animation-direction:reverse;animation-duration:32s" cx="50" cy="52" r="38" ' +
-            'fill="none" stroke="' + c.primary + '" stroke-width="0.9" stroke-dasharray="2 10" opacity="0.4"/>';
+        out += pxo(2, 27, 3, 1, w, 0.6) + pxo(19, 27, 3, 1, w, 0.6);
     }
-    return '<svg viewBox="0 0 100 120" width="80" height="96">' +
-        plantDefs(id, c) +
-        '<ellipse cx="50" cy="114" rx="20" ry="3.4" fill="#07061a" opacity="0.5"/>' +
-        '<ellipse class="p-aura" cx="50" cy="56" rx="40" ry="36" fill="url(#aura-' + id + ')"/>' +
-        rings + inner +
-        '</svg>';
+    if (wl >= 3) {
+        out += pxo(5, 24, 2, 2, w, 0.55) + pxo(17, 23, 2, 2, w, 0.45) +
+            pxo(10, 21, 2, 2, w, 0.35);
+    }
+    return out;
 }
 
-function stemTo(cx, baseY, topY, color, bend) {
-    var my = (baseY + topY) / 2;
-    return '<path d="M' + cx + ',' + baseY +
-        ' Q' + (cx + bend) + ',' + Math.round(my) + ' ' + cx + ',' + topY + '" ' +
-        'fill="none" stroke="' + color + '" stroke-width="3.4" stroke-linecap="round"/>';
-}
-
-function leafAt(x, y, dx, dy, fill, side) {
-    var ex = x + dx;
-    var ey = y + dy;
-    var qx = x + dx * 0.5;
-    var qy = y + dy * 0.5 - 7;
-    return '<path class="' + (side > 0 ? 'p-leaf-r' : 'p-leaf-l') + '" d="M' + x + ',' + y +
-        ' Q' + qx + ',' + qy + ' ' + ex + ',' + ey +
-        ' Q' + (x + dx * 0.3) + ',' + (y + dy * 0.5 + 6) + ' ' + x + ',' + y + ' Z" ' +
-        'fill="' + fill + '"/>';
+function svgShell(inner, wl, c) {
+    return '<svg class="px-plant" viewBox="0 0 24 30" width="96" height="120" ' +
+        'shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">' +
+        baseShadow() + inner + waterMarks(wl, c) + '</svg>';
 }
 
 var PLANT_TYPES = [
 
-    /* 1. Luna Bloom — night lotus cradled by a crescent moon */
+    /* 1. Luna Bloom - pixel lotus under a crescent moon */
     {
         id: 'luna', name: 'Luna Bloom', emoji: '\uD83C\uDF19',
-        colors: { primary: '#a5f3fc', secondary: '#67e8f9', glow: '#22d3ee' },
+        colors: {
+            primary: '#7fdcd2', secondary: '#4fb3ad', light: '#c9f2ec',
+            accent: '#f6c445', stem: '#2f7f78', leaf: '#3f9c8f', leafD: '#2d7a6e',
+            water: '#5aa8e0', cheek: CHEEK
+        },
         animClass: 'anim-float',
         audio: { notes: [329.63, 392.00, 523.25], voice: 'airy', rhythm: [1.5, 1, 2] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var petals = '';
-            for (var i = 0; i < 7; i++) {
-                var rot = (i * 51.4).toFixed(1);
-                petals += '<ellipse cx="0" cy="-13" rx="8" ry="15" fill="' +
-                    (i % 2 ? '#a5f3fc' : '#e0f7fa') + '" opacity="' + (i % 2 ? 0.6 : 0.95) +
-                    '" transform="rotate(' + rot + ')"/>';
-            }
-            var inner =
-                stemTo(50, 112, 64, '#0f766e', -4) +
-                leafAt(50, 98, -21, -12, '#0d9488', -1) +
-                leafAt(50, 88, 19, -10, '#14b8a6', 1) +
-                /* crescent moon, hanging behind the bloom */
-                '<path d="M80,12 A16,16 0 1,0 80,44 A12,12 0 1,1 80,12 Z" fill="#e0f7fa" opacity="0.92"/>' +
-                '<g transform="translate(50,52)">' + petals +
-                '<circle cx="0" cy="0" r="11" fill="#fcd34d"/>' +
-                '<circle cx="0" cy="0" r="6" fill="#fbbf24"/>' +
-                '</g>' +
-                /* two fireflies orbiting the flower */
-                '<g class="p-orbit">' +
-                '<circle cx="50" cy="13" r="2.1" fill="#a5f3fc"/>' +
-                '<circle cx="87" cy="56" r="1.5" fill="#67e8f9" opacity="0.85"/>' +
-                '</g>' +
-                faceSVG(50, 50, 0.9, -1.4);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 15, 28, c.stem, c.leafD) +
+                leafPx(3, 20, c.leaf, c.leafD) +
+                leafPx(16, 23, c.leaf, c.leafD) +
+                mid(12, 6, 4, 2, c.light) +
+                mid(12, 8, 10, 2, c.light) +
+                mid(12, 10, 18, 2, c.primary) +
+                mid(12, 12, 18, 2, c.secondary) +
+                mid(12, 14, 14, 2, c.primary) +
+                mid(12, 16, 8, 2, c.secondary) +
+                mid(12, 9, 8, 4, c.accent) +
+                faceGroup(12, 10, c.cheek, -1.4, 5, 4) +
+                /* crescent moon, top right */
+                px(20, 2, 2, 1, c.light) + px(19, 3, 2, 1, c.light) +
+                px(18, 4, 2, 3, c.light) + px(19, 7, 2, 1, c.light) +
+                px(20, 8, 2, 1, c.light) +
+                sparkPx(3, 5, PAPER, -0.6) + sparkPx(19, 15, c.light, -1.1);
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 2. Ember Lily — a living torch with rising sparks */
+    /* 2. Ember Lily - a blocky little torch */
     {
         id: 'ember', name: 'Ember Lily', emoji: '\uD83D\uDD25',
-        colors: { primary: '#fdba74', secondary: '#fb923c', glow: '#f97316' },
+        colors: {
+            primary: '#ff9a3c', secondary: '#e0642a', light: '#ffd07a',
+            accent: '#fff0b8', stem: '#6b3a24', leaf: '#8a5530', leafD: '#5e3a22',
+            water: '#5aa8e0', cheek: '#c9552a'
+        },
         animClass: 'anim-flicker',
         audio: { notes: [261.63, 329.63, 392.00], voice: 'warm', rhythm: [0.7, 0.7, 1.9] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var embers =
-                '<g class="p-rise"><circle cx="39" cy="40" r="2" fill="#fdba74"/></g>' +
-                '<g class="p-rise" style="animation-delay:-1.2s"><circle cx="63" cy="34" r="1.6" fill="#fed7aa"/></g>' +
-                '<g class="p-rise" style="animation-delay:-2.4s"><circle cx="52" cy="26" r="1.4" fill="#fef3c7"/></g>';
-            var inner =
-                stemTo(50, 112, 66, '#7c2d12', 5) +
-                leafAt(50, 100, -18, -14, '#9a3412', -1) +
-                leafAt(50, 88, 16, -12, '#c2410c', 1) +
-                '<path class="p-flicker" d="M50,22 Q66,38 58,58 Q55,48 50,66 Q45,48 42,58 Q34,38 50,22 Z" ' +
-                'fill="url(#body-' + id + ')"/>' +
-                '<path class="p-flicker" style="animation-delay:-0.9s" d="M50,32 Q58,44 54,58 Q51,50 50,60 Q49,50 46,58 Q42,44 50,32 Z" ' +
-                'fill="#fef3c7" opacity="0.85"/>' +
-                '<path class="p-flicker" style="animation-delay:-0.4s" d="M31,52 Q26,41 21,50 Q19,59 28,61 Q31,56 31,52 Z" ' +
-                'fill="#fb923c" opacity="0.8"/>' +
-                '<path class="p-flicker" style="animation-delay:-1.6s" d="M69,52 Q74,41 79,50 Q81,59 72,61 Q69,56 69,52 Z" ' +
-                'fill="#fdba74" opacity="0.75"/>' +
-                embers +
-                faceSVG(50, 56, 0.85, -3.2);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 16, 28, c.stem, c.leafD) +
+                leafPx(2, 22, c.leaf, c.leafD) +
+                leafPx(17, 25, c.leaf, c.leafD) +
+                mid(12, 20, 14, 2, c.secondary) +
+                mid(12, 18, 16, 2, c.primary) +
+                mid(12, 16, 16, 2, c.secondary) +
+                mid(12, 14, 12, 2, c.primary) +
+                px(7, 12, 10, 2, c.primary) +
+                px(4, 11, 3, 5, c.secondary) +
+                px(17, 11, 3, 5, c.secondary) +
+                px(8, 10, 8, 2, c.light) +
+                px(9, 8, 6, 2, c.primary) +
+                px(10, 6, 4, 2, c.light) +
+                px(11, 4, 2, 2, c.accent) +
+                faceGroup(12, 15, c.cheek, -3.2, 4, 3) +
+                '<g class="px-rise">' + px(6, 8, 2, 2, c.light) + '</g>' +
+                '<g class="px-rise" style="animation-delay:-1.1s">' + px(17, 5, 2, 2, c.accent) + '</g>' +
+                '<g class="px-rise" style="animation-delay:-2.1s">' + px(13, 2, 1, 1, c.light) + '</g>';
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 3. Aurora Tulip — petals wrapped in a drifting light ribbon */
+    /* 3. Aurora Tulip - three peaked cup with two colour stripes */
     {
         id: 'aurora', name: 'Aurora Tulip', emoji: '\uD83C\uDF37',
-        colors: { primary: '#5ef2d6', secondary: '#e879f9', glow: '#a78bfa' },
+        colors: {
+            primary: '#7ee0d3', secondary: '#4ab8c9', light: '#d5f7f2',
+            accent: '#ef86d8', stem: '#2c6f7d', leaf: '#3d8e9a', leafD: '#2a6b74',
+            water: '#5aa8e0', cheek: CHEEK
+        },
         animClass: 'anim-wave',
         audio: { notes: [392.00, 440.00, 523.25], voice: 'bright', rhythm: [1, 1.4, 1.3] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var inner =
-                stemTo(50, 112, 64, '#155e75', -6) +
-                leafAt(50, 96, 20, -12, '#0e7490', 1) +
-                leafAt(50, 86, -18, -14, '#0891b2', -1) +
-                '<path class="p-ribbon" d="M14,80 Q24,42 50,46 Q78,50 89,28" fill="none" ' +
-                'stroke="#e879f9" stroke-width="2" opacity="0.72" stroke-linecap="round"/>' +
-                '<path class="p-ribbon" style="animation-delay:-1.1s" d="M18,56 Q34,26 66,32" fill="none" ' +
-                'stroke="#5ef2d6" stroke-width="1.6" opacity="0.6" stroke-linecap="round"/>' +
-                '<g transform="translate(50,52)">' +
-                '<path d="M-17,10 Q-20,-16 0,-24 Q20,-16 17,10 Q9,5 0,9 Q-9,5 -17,10 Z" fill="url(#body-' + id + ')"/>' +
-                '<path d="M-9,8 Q-11,-12 0,-19 Q11,-12 9,8 Q5,4 0,7 Q-5,4 -9,8 Z" fill="#e879f9" opacity="0.85"/>' +
-                '<path d="M-4,6 Q-5,-8 0,-14 Q5,-8 4,6 Q2,3 0,5 Q-2,3 -4,6 Z" fill="#f0abfc"/>' +
-                '</g>' +
-                '<g class="p-orbit-rev">' +
-                '<circle cx="50" cy="16" r="1.6" fill="#5ef2d6"/>' +
-                '<circle cx="83" cy="62" r="1.2" fill="#e879f9"/>' +
-                '</g>' +
-                faceSVG(50, 54, 0.85, -2.6);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 16, 28, c.stem, c.leafD) +
+                leafPx(17, 21, c.leaf, c.leafD) +
+                leafPx(2, 24, c.leaf, c.leafD) +
+                mid(12, 16, 10, 2, c.secondary) +
+                mid(12, 14, 14, 2, c.primary) +
+                mid(12, 12, 14, 2, c.primary) +
+                mid(12, 10, 12, 2, c.light) +
+                px(6, 5, 3, 5, c.secondary) +
+                px(11, 4, 3, 6, c.light) +
+                px(16, 5, 3, 5, c.secondary) +
+                px(8, 13, 2, 3, c.accent) + px(14, 13, 2, 3, c.accent) +
+                faceGroup(12, 11, c.cheek, -2.6, 4, 4) +
+                sparkPx(3, 8, PAPER, -0.9) + sparkPx(19, 4, c.light, -1.7);
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 4. Crystal Daisy — faceted crystal petals with a turning halo */
+    /* 4. Crystal Daisy - eight chunky facets around a gold core */
     {
         id: 'crystal', name: 'Crystal Daisy', emoji: '\u2744\uFE0F',
-        colors: { primary: '#e0f2fe', secondary: '#7dd3fc', glow: '#38bdf8' },
+        colors: {
+            primary: '#cfe9fb', secondary: '#8fc4e8', light: '#ffffff',
+            accent: '#f6c445', stem: '#4a7f9e', leaf: '#5f9ab5', leafD: '#3f7590',
+            water: '#5aa8e0', cheek: CHEEK
+        },
         animClass: 'anim-spin-slow',
         audio: { notes: [440.00, 587.33, 659.25], voice: 'crystal', rhythm: [0.55, 0.55, 1.9] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var petals = '';
-            for (var i = 0; i < 8; i++) {
-                petals += '<g transform="rotate(' + (i * 45) + ')">' +
-                    '<path d="M0,-27 L7.5,-15 L0,-6 L-7.5,-15 Z" fill="' + (i % 2 ? '#e0f2fe' : '#7dd3fc') + '"/>' +
-                    '<path d="M0,-27 L7.5,-15 L0,-13 Z" fill="#ffffff" opacity="0.72"/>' +
-                    '</g>';
-            }
-            var inner =
-                stemTo(50, 112, 70, '#0c4a6e', 4) +
-                leafAt(50, 98, -18, -12, '#075985', -1) +
-                leafAt(50, 88, 16, -10, '#0e7490', 1) +
-                '<circle class="p-halo" cx="50" cy="48" r="28" fill="none" stroke="#7dd3fc" ' +
-                'stroke-width="1" stroke-dasharray="2 8" opacity="0.7" style="transform-origin:50px 48px"/>' +
-                '<g transform="translate(50,48)">' + petals +
-                '<circle cx="0" cy="0" r="9" fill="#fcd34d"/>' +
-                '<circle cx="0" cy="0" r="4.5" fill="#fbbf24"/>' +
-                '</g>' +
-                '<g class="p-twinkle"><path d="M78,28 L79.5,32 L83.5,33.5 L79.5,35 L78,39 L76.5,35 L72.5,33.5 L76.5,32 Z" fill="#e0f2fe"/></g>' +
-                '<g class="p-twinkle" style="animation-delay:-1.3s"><path d="M22,72 L23.2,75 L26.2,76.2 L23.2,77.4 L22,80.4 L20.8,77.4 L17.8,76.2 L20.8,75 Z" fill="#bae6fd"/></g>' +
-                faceSVG(50, 46, 0.85, -5.1);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 16, 28, c.stem, c.leafD) +
+                leafPx(3, 21, c.leaf, c.leafD) +
+                leafPx(16, 24, c.leaf, c.leafD) +
+                px(11, 3, 2, 6, c.primary) +
+                px(11, 15, 2, 6, c.secondary) +
+                px(3, 11, 6, 2, c.primary) +
+                px(15, 11, 6, 2, c.primary) +
+                px(5, 5, 4, 4, c.secondary) + px(15, 5, 4, 4, c.secondary) +
+                px(5, 15, 4, 4, c.secondary) + px(15, 15, 4, 4, c.secondary) +
+                px(6, 6, 2, 2, c.light) + px(16, 6, 2, 2, c.light) +
+                px(6, 16, 2, 2, c.light) + px(16, 16, 2, 2, c.light) +
+                px(7, 7, 10, 10, c.accent) +
+                px(8, 8, 8, 8, c.light) +
+                faceGroup(12, 10, c.cheek, -5.1, 4, 4) +
+                sparkPx(2, 3, c.light, -0.4, 'px-twinkle') +
+                sparkPx(20, 17, c.light, -1.3, 'px-twinkle');
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 5. Neon Rose — spiral rose ringed by a floating thorn */
+    /* 5. Neon Rose - spiral bloom built from stacked bands */
     {
         id: 'neonrose', name: 'Neon Rose', emoji: '\uD83C\uDF39',
-        colors: { primary: '#f0abfc', secondary: '#e879f9', glow: '#d946ef' },
+        colors: {
+            primary: '#f3a6dd', secondary: '#d464ad', light: '#ffd6ef',
+            accent: '#a8328f', stem: '#7a3566', leaf: '#98507f', leafD: '#6d3a5c',
+            water: '#5aa8e0', cheek: '#e274a2'
+        },
         animClass: 'anim-float',
         audio: { notes: [293.66, 329.63, 440.00], voice: 'smooth', rhythm: [1.2, 0.8, 1.6] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var inner =
-                stemTo(50, 112, 70, '#831843', -5) +
-                leafAt(50, 98, 20, -12, '#9d174d', 1) +
-                leafAt(50, 88, -18, -12, '#be185d', -1) +
-                '<g class="p-orbit" style="animation-duration:14s">' +
-                '<path d="M78,36 L82.5,43 L75.5,43 Z" fill="#e879f9"/>' +
-                '</g>' +
-                '<g transform="translate(50,50)">' +
-                '<path d="M0,-24 C17,-24 25,-12 25,0 C25,14 14,22 0,22 C-14,22 -25,14 -25,0 C-25,-12 -17,-24 0,-24 Z" fill="#9d174d"/>' +
-                '<path d="M0,-19 C13,-19 19,-10 19,0 C19,11 10,17 0,17 C-10,17 -19,11 -19,0 C-19,-10 -13,-19 0,-19 Z" fill="#d946ef" opacity="0.92"/>' +
-                '<path d="M0,-13 C9,-13 13,-7 13,0 C13,7 7,12 0,12 C-7,12 -13,7 -13,0 C-13,-7 -9,-13 0,-13 Z" fill="#f0abfc"/>' +
-                '<path d="M0,-8 C5,-8 7,-4 7,0 C7,5 4,8 0,8 C-4,8 -7,5 -7,0 C-7,-4 -5,-8 0,-8 Z" fill="#fbcfe8"/>' +
-                '</g>' +
-                faceSVG(50, 50, 0.85, -0.8);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 18, 28, c.stem, c.leafD) +
+                leafPx(3, 22, c.leaf, c.leafD) +
+                leafPx(16, 25, c.leaf, c.leafD) +
+                mid(12, 6, 6, 2, c.light) +
+                mid(12, 8, 12, 2, c.primary) +
+                mid(12, 10, 16, 2, c.primary) +
+                mid(12, 12, 18, 2, c.secondary) +
+                mid(12, 14, 16, 2, c.primary) +
+                mid(12, 16, 12, 2, c.secondary) +
+                mid(12, 18, 8, 2, c.primary) +
+                px(6, 9, 2, 2, c.light) + px(16, 10, 2, 2, c.light) +
+                px(9, 16, 2, 2, c.accent) + px(14, 15, 2, 2, c.light) +
+                faceGroup(12, 11, c.cheek, -0.8, 5, 4);
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 6. Solar Sun — a slowly turning crown of uneven rays */
+    /* 6. Solar Sun - eight petals around a big seed head */
     {
         id: 'solar', name: 'Solar Sun', emoji: '\uD83C\uDF3B',
-        colors: { primary: '#fde68a', secondary: '#fcd34d', glow: '#f59e0b' },
+        colors: {
+            primary: '#f8c93f', secondary: '#e0a028', light: '#ffe9a0',
+            accent: '#8a5a1f', stem: '#4f7f2f', leaf: '#63a03c', leafD: '#47762b',
+            water: '#5aa8e0', cheek: '#d98a2a'
+        },
         animClass: 'anim-bob',
         audio: { notes: [392.00, 523.25, 659.25], voice: 'bright', rhythm: [0.9, 0.9, 2.3] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var rays = '';
-            for (var i = 0; i < 16; i++) {
-                var long = i % 2 === 0;
-                var len = long ? 15 : 8;
-                var half = long ? 3.6 : 2.8;
-                rays += '<path d="M0,-19 L-' + half + ',-' + (19 + len) + ' L' + half + ',-' + (19 + len) + ' Z" ' +
-                    'fill="' + (long ? '#fbbf24' : '#fde68a') + '" transform="rotate(' + (i * 22.5) + ' 50 50)"/>';
-            }
-            var inner =
-                stemTo(50, 112, 72, '#365314', 4) +
-                leafAt(50, 98, -18, -12, '#4d7c0f', -1) +
-                leafAt(50, 88, 16, -10, '#65a30d', 1) +
-                '<g class="p-spin" style="transform-origin:50px 50px">' + rays + '</g>' +
-                '<circle cx="50" cy="50" r="17" fill="#fde68a"/>' +
-                '<circle cx="50" cy="50" r="13" fill="#fbbf24"/>' +
-                '<g class="p-orbit" style="animation-duration:12s"><circle cx="82" cy="38" r="2.8" fill="#fef3c7"/></g>' +
-                '<g class="p-orbit-rev"><circle cx="19" cy="60" r="2" fill="#fde68a"/></g>' +
-                faceSVG(50, 50, 0.8, -4.3);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 16, 28, c.stem, c.leafD) +
+                leafPx(3, 21, c.leaf, c.leafD) +
+                leafPx(16, 24, c.leaf, c.leafD) +
+                px(11, 2, 2, 5, c.light) +
+                px(11, 17, 2, 5, c.light) +
+                px(2, 11, 5, 2, c.light) +
+                px(17, 11, 5, 2, c.light) +
+                px(5, 4, 3, 3, c.primary) + px(16, 4, 3, 3, c.primary) +
+                px(5, 17, 3, 3, c.primary) + px(16, 17, 3, 3, c.primary) +
+                px(7, 7, 10, 10, c.secondary) +
+                px(8, 8, 8, 8, c.primary) +
+                faceGroup(12, 9, c.cheek, -4.3, 4, 3) +
+                sparkPx(2, 2, c.light, -1.5, 'px-twinkle');
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 7. Frost Fern — arching fronds shedding slow frost */
+    /* 7. Frost Fern - five stepped fronds over a small bulb */
     {
         id: 'frost', name: 'Frost Fern', emoji: '\u2744\uFE0F',
-        colors: { primary: '#bae6fd', secondary: '#7dd3fc', glow: '#38bdf8' },
+        colors: {
+            primary: '#bfe3f7', secondary: '#7bb6da', light: '#eaf7ff',
+            accent: '#5a90b5', stem: '#4a7f9e', leaf: '#6fa8c8', leafD: '#4a7f9e',
+            water: '#5aa8e0', cheek: '#9ac6e4'
+        },
         animClass: 'anim-wave',
         audio: { notes: [440.00, 523.25, 659.25], voice: 'airy', rhythm: [1.1, 1.1, 1.6] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var fronds = '';
-            for (var i = -2; i <= 2; i++) {
-                var tipX = 50 + i * 18;
-                var tipY = 32 + Math.abs(i) * 9;
-                var ctrlX = 50 + i * 6;
-                var ctrlY = 80 - Math.abs(i) * 4;
-                fronds += '<path d="M50,104 Q' + ctrlX + ',' + ctrlY + ' ' + tipX + ',' + tipY + '" ' +
-                    'fill="none" stroke="' + (i === 0 ? '#7dd3fc' : '#38bdf8') + '" stroke-width="2.6" ' +
-                    'stroke-linecap="round" opacity="' + (i === 0 ? 1 : 0.85) + '"/>';
-                for (var j = 1; j <= 5; j++) {
-                    var t = j / 5.6;
-                    var bx = 50 + (tipX - 50) * t;
-                    var by = 104 + (tipY - 104) * t;
-                    fronds += '<ellipse cx="' + (bx + (i >= 0 ? 4.5 : -4.5)) + '" cy="' + by +
-                        '" rx="4.6" ry="1.8" fill="#bae6fd" transform="rotate(' + (i * 16) + ' ' + bx + ' ' + by + ')"/>';
-                }
-            }
-            var frost =
-                '<g class="p-fall"><path d="M22,54 l1.4,2.4 -1.4,2.4 -1.4,-2.4 Z" fill="#e0f2fe"/></g>' +
-                '<g class="p-fall" style="animation-delay:-1.7s"><path d="M76,44 l1.2,2 -1.2,2 -1.2,-2 Z" fill="#bae6fd"/></g>' +
-                '<g class="p-fall" style="animation-delay:-3.1s"><path d="M64,30 l1,1.8 -1,1.8 -1,-1.8 Z" fill="#e0f2fe"/></g>';
-            var inner =
-                '<g class="p-breathe">' + fronds + '</g>' +
-                '<circle cx="50" cy="88" r="13" fill="#0e7490" opacity="0.85"/>' +
-                '<circle cx="50" cy="88" r="9" fill="url(#body-' + id + ')"/>' +
-                frost +
-                faceSVG(50, 88, 0.8, -2.1);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = pxLine(12, 25, 12, 8, c.primary, 2) +
+                pxLine(12, 25, 5, 13, c.secondary, 2) +
+                pxLine(12, 25, 19, 13, c.secondary, 2) +
+                pxLine(12, 25, 2, 20, c.leaf, 2) +
+                pxLine(12, 25, 22, 20, c.leaf, 2) +
+                px(11, 6, 2, 2, c.light) + px(3, 11, 2, 2, c.light) +
+                px(20, 11, 2, 2, c.light) + px(1, 18, 2, 2, c.light) +
+                px(21, 18, 2, 2, c.light) +
+                px(8, 22, 8, 6, c.secondary) +
+                px(9, 23, 6, 4, c.primary) +
+                faceGroup(12, 23, c.cheek, -2.1, 3, 2) +
+                '<g class="px-fall">' + px(4, 8, 1, 1, c.light) + px(3, 9, 3, 1, c.light) + px(4, 10, 1, 1, c.light) + '</g>' +
+                '<g class="px-fall" style="animation-delay:-1.6s">' + px(19, 6, 1, 1, c.light) + px(18, 7, 3, 1, c.light) + px(19, 8, 1, 1, c.light) + '</g>' +
+                '<g class="px-fall" style="animation-delay:-2.9s">' + px(15, 3, 2, 2, c.light) + '</g>';
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 8. Violet Bell — a bell that swings its own clapper */
+    /* 8. Violet Bell - a bell that swings its own pixel clapper */
     {
         id: 'violet', name: 'Violet Bell', emoji: '\uD83D\uDD14',
-        colors: { primary: '#c4b5fd', secondary: '#a78bfa', glow: '#8b5cf6' },
+        colors: {
+            primary: '#a99ae8', secondary: '#7d6cc4', light: '#d9d0ff',
+            accent: '#f6c445', stem: '#4f3a7a', leaf: '#65509a', leafD: '#4a3a73',
+            water: '#5aa8e0', cheek: '#c9a6e2'
+        },
         animClass: 'anim-swing',
         audio: { notes: [220.00, 293.66, 329.63], voice: 'mellow', rhythm: [1.7, 0.9, 1.5] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var inner =
-                stemTo(50, 112, 44, '#4c1d95', -7) +
-                leafAt(50, 96, 19, -12, '#5b21b6', 1) +
-                leafAt(50, 86, -17, -12, '#6d28d9', -1) +
-                '<circle cx="50" cy="42" r="3" fill="#ede9fe"/>' +
-                '<path d="M33,44 Q33,72 50,77 Q67,72 67,44 Q50,36 33,44 Z" fill="url(#body-' + id + ')"/>' +
-                '<path d="M37,46 Q37,68 50,72 Q63,68 63,46 Q50,40 37,46 Z" fill="#c4b5fd" opacity="0.8"/>' +
-                '<ellipse cx="50" cy="45" rx="15" ry="3" fill="#ede9fe" opacity="0.55"/>' +
-                '<circle class="p-clapper" cx="50" cy="79" r="4.5" fill="#8b5cf6"/>' +
-                '<circle class="p-clapper" cx="50" cy="79" r="2" fill="#ddd6fe" style="animation-delay:-0.3s"/>' +
-                '<g class="p-orbit" style="animation-duration:11s">' +
-                '<path d="M74,34 L74,25 L81,23 L81,32" fill="none" stroke="#c4b5fd" stroke-width="1.6"/>' +
-                '<circle cx="72" cy="34" r="2.3" fill="#c4b5fd"/>' +
-                '<circle cx="79" cy="32" r="2.3" fill="#c4b5fd"/>' +
-                '</g>' +
-                faceSVG(50, 58, 0.8, -3.7);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 17, 28, c.stem, c.leafD) +
+                leafPx(16, 22, c.leaf, c.leafD) +
+                leafPx(3, 25, c.leaf, c.leafD) +
+                mid(12, 8, 8, 2, c.light) +
+                mid(12, 10, 12, 2, c.primary) +
+                mid(12, 12, 14, 2, c.primary) +
+                mid(12, 14, 16, 2, c.secondary) +
+                mid(12, 16, 18, 2, c.primary) +
+                mid(12, 18, 16, 2, c.secondary) +
+                px(2, 19, 3, 2, c.light) + px(19, 19, 3, 2, c.light) +
+                '<g class="px-clapper">' + px(11, 21, 2, 3, c.accent) + px(10, 22, 4, 1, c.accent) + '</g>' +
+                faceGroup(12, 11, c.cheek, -3.7, 5, 4);
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 9. Glow Moss — a breathing moss mound puffing spores */
+    /* 9. Glow Moss - a low mound with two sprouts and rising spores */
     {
         id: 'moss', name: 'Glow Moss', emoji: '\uD83C\uDF3F',
-        colors: { primary: '#86efac', secondary: '#4ade80', glow: '#22c55e' },
+        colors: {
+            primary: '#7fd07a', secondary: '#4f9e5a', light: '#b8ebb0',
+            accent: '#e8f7c0', stem: '#3f7a4a', leaf: '#5aa864', leafD: '#3f7a4a',
+            water: '#5aa8e0', cheek: '#6fb06a'
+        },
         animClass: 'anim-bob',
         audio: { notes: [196.00, 261.63, 329.63], voice: 'deep', rhythm: [2.2, 1, 1.3] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var mound =
-                '<ellipse cx="32" cy="94" rx="17" ry="12" fill="#166534"/>' +
-                '<ellipse cx="68" cy="96" rx="16" ry="11" fill="#14532d"/>' +
-                '<ellipse cx="50" cy="92" rx="21" ry="15" fill="#15803d"/>' +
-                '<ellipse cx="41" cy="86" rx="13" ry="12" fill="#4ade80"/>' +
-                '<ellipse cx="61" cy="84" rx="12" ry="13" fill="#86efac"/>' +
-                '<ellipse cx="50" cy="81" rx="12" ry="11" fill="#bbf7d0"/>';
-            var sprouts =
-                '<path d="M33,76 Q30,68 34,63" fill="none" stroke="#bbf7d0" stroke-width="2" stroke-linecap="round"/>' +
-                '<circle cx="34" cy="62" r="3.4" fill="#4ade80"/>' +
-                '<path d="M67,78 Q71,70 67,65" fill="none" stroke="#bbf7d0" stroke-width="2" stroke-linecap="round"/>' +
-                '<circle cx="67" cy="64" r="3" fill="#86efac"/>';
-            var spores =
-                '<g class="p-spore"><circle cx="34" cy="56" r="1.8" fill="#bbf7d0"/></g>' +
-                '<g class="p-spore" style="animation-delay:-1.4s"><circle cx="58" cy="50" r="1.4" fill="#86efac"/></g>' +
-                '<g class="p-spore" style="animation-delay:-2.9s"><circle cx="70" cy="58" r="1.2" fill="#d9f99d"/></g>';
-            var inner =
-                '<g class="p-breathe">' + mound + sprouts + '</g>' +
-                spores +
-                faceSVG(50, 82, 0.78, -1.9);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = px(4, 16, 2, 6, c.light) + px(3, 14, 4, 2, c.primary) +
+                px(18, 18, 2, 5, c.light) + px(17, 16, 4, 2, c.primary) +
+                mid(12, 25, 20, 3, c.leafD) +
+                mid(12, 22, 18, 3, c.secondary) +
+                mid(12, 19, 14, 3, c.primary) +
+                mid(12, 17, 8, 2, c.light) +
+                faceGroup(12, 21, c.cheek, -1.9, 4, 2) +
+                '<g class="px-rise">' + px(5, 12, 2, 2, c.accent) + '</g>' +
+                '<g class="px-rise" style="animation-delay:-1.4s">' + px(18, 13, 2, 2, c.light) + '</g>' +
+                '<g class="px-rise" style="animation-delay:-2.7s">' + px(13, 10, 1, 1, c.accent) + '</g>';
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 10. Star Orchid — five-point orchid inside a turning constellation */
+    /* 10. Star Orchid - eight pointed pixel star */
     {
         id: 'star', name: 'Star Orchid', emoji: '\u2B50',
-        colors: { primary: '#93c5fd', secondary: '#60a5fa', glow: '#3b82f6' },
+        colors: {
+            primary: '#93b8f0', secondary: '#5d8fd6', light: '#d7e6ff',
+            accent: '#f6c445', stem: '#3c5f9e', leaf: '#4f7ab8', leafD: '#3a5c92',
+            water: '#5aa8e0', cheek: '#8fb0e0'
+        },
         animClass: 'anim-spin-slow',
         audio: { notes: [523.25, 587.33, 783.99], voice: 'crystal', rhythm: [0.5, 0.5, 2.1] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var petals = '';
-            for (var i = 0; i < 5; i++) {
-                petals += '<g transform="rotate(' + (i * 72 - 90) + ')">' +
-                    '<path d="M0,-6 Q9,-20 0,-32 Q-9,-20 0,-6 Z" fill="' + (i % 2 ? '#60a5fa' : '#93c5fd') + '" opacity="0.94"/>' +
-                    '</g>';
-            }
-            var inner =
-                stemTo(50, 112, 72, '#1e3a8a', 5) +
-                leafAt(50, 98, -19, -12, '#1e40af', -1) +
-                leafAt(50, 90, 17, -10, '#2563eb', 1) +
-                '<circle class="p-halo" cx="50" cy="50" r="31" fill="none" stroke="#93c5fd" ' +
-                'stroke-width="0.9" stroke-dasharray="1 6" opacity="0.6" style="transform-origin:50px 50px"/>' +
-                '<g transform="translate(50,50)">' + petals +
-                '<circle cx="0" cy="0" r="12" fill="#bfdbfe"/>' +
-                '</g>' +
-                '<g class="p-orbit" style="animation-duration:15s">' +
-                '<path d="M76,26 l1.8,3.6 3.9,0.6 -2.8,2.8 0.7,4 -3.6,-1.9 -3.6,1.9 0.7,-4 -2.8,-2.8 3.9,-0.6 Z" fill="#fcd34d"/>' +
-                '</g>' +
-                '<circle class="p-twinkle" cx="21" cy="38" r="1.7" fill="#dbeafe"/>' +
-                '<circle class="p-twinkle" style="animation-delay:-1.2s" cx="80" cy="72" r="1.3" fill="#eff6ff"/>' +
-                faceSVG(50, 50, 0.8, -5.6);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 16, 28, c.stem, c.leafD) +
+                leafPx(3, 21, c.leaf, c.leafD) +
+                leafPx(16, 24, c.leaf, c.leafD) +
+                px(11, 3, 2, 7, c.primary) + px(10, 2, 4, 2, c.light) +
+                px(3, 11, 6, 2, c.primary) + px(2, 10, 2, 4, c.light) +
+                px(15, 11, 6, 2, c.primary) + px(20, 10, 2, 4, c.light) +
+                px(11, 15, 2, 6, c.secondary) + px(10, 19, 4, 2, c.secondary) +
+                px(5, 5, 3, 3, c.secondary) + px(16, 5, 3, 3, c.secondary) +
+                px(5, 16, 3, 3, c.secondary) + px(16, 16, 3, 3, c.secondary) +
+                px(8, 8, 8, 8, c.secondary) +
+                px(9, 9, 6, 6, c.light) +
+                faceGroup(12, 10, c.cheek, -5.6, 3, 4) +
+                sparkPx(19, 3, c.accent, -0.5, 'px-twinkle') +
+                sparkPx(3, 19, c.light, -1.4, 'px-twinkle');
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 11. Plasma Peony — ruffled bloom crackling with energy arcs */
+    /* 11. Plasma Peony - ruffled pink layers with crackling sparks */
     {
         id: 'plasma', name: 'Plasma Peony', emoji: '\uD83E\uDE78',
-        colors: { primary: '#f9a8d4', secondary: '#f472b6', glow: '#ec4899' },
+        colors: {
+            primary: '#f7a8cf', secondary: '#d96fa8', light: '#ffd9ea',
+            accent: '#a83f76', stem: '#7a3a5e', leaf: '#96506f', leafD: '#6b3a52',
+            water: '#5aa8e0', cheek: '#e88aa8'
+        },
         animClass: 'anim-float',
         audio: { notes: [329.63, 440.00, 523.25], voice: 'smooth', rhythm: [1, 1.2, 1.5] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var cols = ['#9d174d', '#db2777', '#f472b6'];
-            var layers = '';
-            for (var l = 0; l < 3; l++) {
-                var n = 7 - l;
-                var r = 24 - l * 6;
-                for (var p = 0; p < n; p++) {
-                    var a = p * (360 / n) + l * 22;
-                    layers += '<ellipse cx="50" cy="' + (50 - r * 0.62).toFixed(1) + '" rx="' + (r * 0.5).toFixed(1) +
-                        '" ry="' + r + '" fill="' + cols[l] + '" opacity="' + (0.62 + l * 0.13).toFixed(2) +
-                        '" transform="rotate(' + a.toFixed(1) + ' 50 50)"/>';
-                }
-            }
-            var inner =
-                stemTo(50, 112, 70, '#831843', -4) +
-                leafAt(50, 98, 20, -12, '#9d174d', 1) +
-                leafAt(50, 88, -18, -12, '#be185d', -1) +
-                layers +
-                '<circle cx="50" cy="50" r="9" fill="#fbcfe8"/>' +
-                '<path class="p-arc" d="M25,30 L31,40 L27,44 L35,55" fill="none" stroke="#f9a8d4" stroke-width="1.5" stroke-linecap="round"/>' +
-                '<path class="p-arc" style="animation-delay:-0.9s" d="M75,34 L69,44 L73,48 L65,59" fill="none" stroke="#fbcfe8" stroke-width="1.3" stroke-linecap="round"/>' +
-                '<g class="p-orbit-rev" style="animation-duration:10s"><circle cx="50" cy="17" r="2.2" fill="#fbcfe8"/></g>' +
-                faceSVG(50, 50, 0.8, -0.4);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = stemPx(11, 19, 28, c.stem, c.leafD) +
+                leafPx(3, 23, c.leaf, c.leafD) +
+                leafPx(16, 25, c.leaf, c.leafD) +
+                mid(12, 5, 6, 2, c.light) +
+                mid(12, 7, 10, 2, c.primary) +
+                mid(12, 9, 14, 2, c.primary) +
+                mid(12, 11, 18, 2, c.secondary) +
+                mid(12, 13, 20, 2, c.secondary) +
+                mid(12, 15, 18, 2, c.primary) +
+                mid(12, 17, 14, 2, c.secondary) +
+                mid(12, 19, 8, 2, c.accent) +
+                px(8, 10, 2, 2, c.light) + px(15, 13, 2, 2, c.light) +
+                px(10, 16, 3, 2, c.light) +
+                faceGroup(12, 10, c.cheek, -0.4, 5, 4) +
+                sparkPx(2, 5, c.light, -0.8) + sparkPx(20, 7, c.light, -1.6);
+            return svgShell(s, wl, c);
         }
     },
 
-    /* 12. Comet Vine — a comet head dragging a sparkling tail */
+    /* 12. Comet Vine - a pixel comet head dragging a stepped tail */
     {
         id: 'comet', name: 'Comet Vine', emoji: '\u2604\uFE0F',
-        colors: { primary: '#67e8f9', secondary: '#22d3ee', glow: '#06b6d4' },
+        colors: {
+            primary: '#7fe2ec', secondary: '#3fb8cc', light: '#d6fbff',
+            accent: '#f6c445', stem: '#2f6f80', leaf: '#3f95a8', leafD: '#2c6b7a',
+            water: '#5aa8e0', cheek: '#3fb8cc'
+        },
         animClass: 'anim-wave',
         audio: { notes: [440.00, 523.25, 587.33], voice: 'airy', rhythm: [0.8, 0.8, 2.2] },
         renderSVG: function(wl) {
-            var id = this.id, c = this.colors;
-            var inner =
-                '<path d="M64,106 Q80,92 75,72 Q71,57 85,48" fill="none" stroke="#0e7490" ' +
-                'stroke-width="2.6" stroke-linecap="round"/>' +
-                '<path class="p-ribbon" d="M44,58 Q30,78 18,98" fill="none" stroke="#22d3ee" ' +
-                'stroke-width="5" opacity="0.45" stroke-linecap="round"/>' +
-                '<path class="p-ribbon" style="animation-delay:-0.7s" d="M51,60 Q42,82 32,102" fill="none" ' +
-                'stroke="#67e8f9" stroke-width="3" opacity="0.6" stroke-linecap="round"/>' +
-                '<path class="p-ribbon" style="animation-delay:-1.5s" d="M35,60 Q24,74 14,86" fill="none" ' +
-                'stroke="#a5f3fc" stroke-width="1.8" opacity="0.5" stroke-linecap="round"/>' +
-                '<circle cx="52" cy="44" r="15" fill="#0e7490"/>' +
-                '<circle cx="52" cy="44" r="12" fill="url(#body-' + id + ')"/>' +
-                '<ellipse cx="47" cy="38" rx="5" ry="3.4" fill="#ffffff" opacity="0.5" transform="rotate(-30 47 38)"/>' +
-                '<g class="p-twinkle"><circle cx="24" cy="80" r="1.8" fill="#a5f3fc"/></g>' +
-                '<g class="p-twinkle" style="animation-delay:-1.1s"><circle cx="34" cy="94" r="1.5" fill="#67e8f9"/></g>' +
-                '<g class="p-twinkle" style="animation-delay:-2.2s"><circle cx="16" cy="92" r="1.2" fill="#e0f2fe"/></g>' +
-                '<g class="p-orbit" style="animation-duration:12s"><circle cx="50" cy="12" r="1.6" fill="#a5f3fc"/></g>' +
-                faceSVG(52, 46, 0.8, -4.8);
-            return svgShell(id, c, wl, inner);
+            var c = this.colors;
+            var s = pxLine(7, 28, 13, 14, c.stem, 2) +
+                leafPx(2, 22, c.leaf, c.leafD) +
+                pxLine(13, 13, 4, 27, c.secondary, 2) +
+                pxLine(7, 22, 3, 27, c.primary, 1) +
+                px(12, 4, 9, 9, c.secondary) +
+                px(13, 5, 7, 7, c.primary) +
+                px(14, 6, 4, 3, c.light) +
+                faceGroup(16, 6, c.cheek, -4.8, 3, 3) +
+                sparkPx(8, 17, c.light, -0.7, 'px-twinkle') +
+                sparkPx(5, 22, c.light, -1.5, 'px-twinkle') +
+                '<g class="px-rise" style="animation-delay:-1.1s">' + px(20, 2, 1, 1, c.accent) + '</g>';
+            return svgShell(s, wl, c);
         }
     }
 
