@@ -1,46 +1,42 @@
-# 🎵 Singing Garden
+# 🎵 Singing Garden — Pixel Garden
 
-**Grow strange plants. Make them sing. Create your own garden music!**
+**Plant pixel flowers, teach them a tune, and conduct a tiny choir.**
 
 ## About
 
-Singing Garden is an HTML5 game that combines plant nurturing with musical interaction. Players plant unique flowers in a garden, click them to make them sing, water them to change their sound, and combine different plants to create melodies.
+Singing Garden is an HTML5 toy that mixes plant nurturing with music making. Plant flowers in a garden, tap them to hear them sing, water them to enrich their harmony, and drag across the garden to conduct them. Every plant is drawn on a 24×30 pixel grid and every sound is synthesised in the browser.
 
 ## Features
 
-- **6 Unique Plant Types** - Each with its own visual design and musical voice:
-  - 🌻 Sunflare - Bright, cheerful sine waves (C major triad)
-  - 🍄 Toadstool - Deep, groovy triangle waves (A minor triad)
-  - 🔔 Bluebelle - Crystal-clear bell tones with long decay
-  - 🌵 Prickle - Sharp, percussive square wave plucks
-  - 🌿 Fernella - Airy, melodic sawtooth sounds
-  - ✨ Lumipetal - Ethereal, dreamy high tones with heavy reverb
-
-- **Interactive Music System** - Click plants to hear them sing arpeggios
-- **Watering Mechanic** - Water plants to shift pitch, add vibrato, and enrich harmonics
-- **Melody Playback** - Press Play Melody to hear all plants sing in sequence
-- **Beautiful Art** - Hand-crafted SVG plants, animated sky, floating clouds, particle effects
-- **No External Assets** - All graphics are SVG, all sounds are Web Audio API synthesized
-- **Keyboard Shortcuts** - Space (play melody), W (water), C (clear), M (mute), 1-6 (select plant), H (help)
+- **12 plant species** — Luna Bloom, Ember Lily, Aurora Tulip, Crystal Daisy, Neon Rose, Solar Sun, Frost Fern, Violet Bell, Glow Moss, Star Orchid, Plasma Peony and Comet Vine. Each has its own pixel sprite, rhythm pattern and voice, all tuned to a C-major pentatonic scale so any combination stays in key.
+- **Four switchable scenes** — Meadow, Sakura Grove, Desert Oasis and Snowfield. Each has its own palette, sky, ground props and ambient particles.
+- **Pixel art everywhere** — hard-edged UI, block shadows, monospace type, stepped frame animation. No external fonts or image assets.
+- **Musical toys** — Play a melody, build a Harmony choir, or unleash Chaos. Conduct mode lets you sweep the pointer across plants to make them sing in sequence.
+- **Personality** — plants blink, blush, sneeze, gossip, hum and doze off. Overwater one and the sneeze spreads to its neighbours.
+- **No external assets** — graphics are inline SVG, particles are canvas rectangles, sound is Web Audio API synthesis.
 
 ## How to Play
 
-1. **Plant**: Choose a plant from the bottom menu, then click an empty plot to plant it.
-2. **Sing**: Click a planted flower to make it sing!
-3. **Water**: Toggle Water mode, then click a plant to water it. Watering changes how it sounds!
-4. **Melody**: Plant different flowers and press Play Melody to hear them sing together!
+1. **Plant** — pick a seed in the dock, tap an empty plot.
+2. **Sing** — tap a bloomed plant to hear its phrase.
+3. **Water** — switch to Water mode and tap a plant; up to three waterings deepen its sound.
+4. **Conduct** — switch to Conduct mode and drag across the garden.
+5. **Scenes** — tap the flower button in the top bar, or press `N`, to change world.
+
+## Keyboard Shortcuts
+
+`Space` play melody · `1` plant mode · `2` conduct mode · `3` water mode · `N` next scene · `M` mute · `C` clear · `X` chaos · `H` help
 
 ## Tech Stack
 
-- Pure HTML5 / CSS3 / JavaScript (no frameworks)
-- Web Audio API for sound synthesis
-- SVG for plant graphics
-- Canvas for particle effects
-- CSS animations for smooth visuals
+- Pure HTML5 / CSS3 / JavaScript, no frameworks, no build step
+- Web Audio API for all music and sound effects
+- Inline SVG (integer grid + `crispEdges`) for plants and scenery
+- Canvas rectangles for particles
 
 ## Browser Support
 
-Works in all modern browsers with Web Audio API support (Chrome, Firefox, Safari, Edge).
+Any modern browser with Web Audio API support (Chrome, Firefox, Safari, Edge).
 
 ## License
 
